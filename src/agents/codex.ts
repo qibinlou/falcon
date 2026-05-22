@@ -39,11 +39,12 @@ export class CodexLauncher implements AgentLauncher {
       }
     }
 
-    env[ENV_CODEX_HOME] = this.getCodexDir();
+    const codexDir = this.getCodexDir();
+    env[ENV_CODEX_HOME] = codexDir;
 
     if (model) {
       try {
-        ensureCodexConfig(env[ENV_CODEX_HOME], model, baseUrl, env['OPENAI_BASE_URL']);
+        ensureCodexConfig(codexDir, model, baseUrl, env['OPENAI_BASE_URL']);
       } catch (err) {
         console.error(
           `Warning: Failed to configure Codex: ${err instanceof Error ? err.message : err}`,
