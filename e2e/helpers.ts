@@ -126,17 +126,24 @@ export type ApiKeyName =
 export function buildEnv(
   include: Partial<Record<ApiKeyName, string>> = {},
 ): Record<string, string> {
-  const ALL_KEYS: ApiKeyName[] = [
+  const STRIP_VARS = [
     'OPENROUTER_API_KEY',
     'OPENAI_API_KEY',
+    'OPENAI_BASE_URL',
     'ANTHROPIC_API_KEY',
+    'ANTHROPIC_BASE_URL',
     'CLOUDFLARE_API_KEY',
+    'CF_API_KEY',
+    'CLOUDFLARE_ACCOUNT_ID',
+    'CF_ACCOUNT_ID',
+    'CLOUDFLARE_GATEWAY_ID',
+    'CF_GATEWAY_ID',
   ];
 
-  // Build a clean env from the current process, omitting all gateway keys
+  // Build a clean env from the current process, omitting all gateway keys and config overrides
   const base: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) {
-    if (v !== undefined && !ALL_KEYS.includes(k as ApiKeyName)) {
+    if (v !== undefined && !STRIP_VARS.includes(k)) {
       base[k] = v;
     }
   }
