@@ -1,7 +1,14 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import type { GatewayConfig } from '../gateways/index.js';
 import type { AgentLauncher, ResolvedConfig, SpawnConfig } from './index.js';
 import { startBifrost } from './shared/bifrost.js';
-import { DEFAULT_ANTHROPIC_BASE_URL } from '../constants.js';
+import {
+  DEFAULT_ANTHROPIC_BASE_URL,
+  ENV_FALCON_DIR,
+  ENV_CLAUDE_CONFIG_DIR,
+  DEFAULT_FALCON_DIR,
+} from '../constants.js';
 
 export class ClaudeLauncher implements AgentLauncher {
   name = 'Claude Code';
@@ -57,6 +64,16 @@ export class ClaudeLauncher implements AgentLauncher {
       env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = model;
       env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = model;
       env['CLAUDE_CODE_SUBAGENT_MODEL'] = model;
+    }
+
+    const falconDir = process.env[ENV_FALCON_DIR] || DEFAULT_FALCON_DIR;
+    const claudeDir = process.env[ENV_CLAUDE_CONFIG_DIR] || path.join(falconDir, this.slug);
+    env[ENV_CLAUDE_CONFIG_DIR] = claudeDir;
+
+    if (!options?.dryRun) {
+      if (!fs.existsSync(claudeDir)) {
+        fs.mkdirSync(claudeDir, { recursive: true, mode: 0o700 });
+      }
     }
 
     return {

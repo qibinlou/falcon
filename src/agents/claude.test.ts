@@ -1,7 +1,11 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
 import type { GatewayConfig } from '../gateways/index.js';
 import { ClaudeLauncher } from './claude.js';
+import { ENV_CLAUDE_CONFIG_DIR } from '../constants.js';
 
 describe('Claude Agent Launcher', () => {
   const launcher = new ClaudeLauncher();
@@ -135,6 +139,36 @@ describe('Claude Agent Launcher', () => {
       const env = resolved.env;
       assert.strictEqual(env['ANTHROPIC_AUTH_TOKEN'], 'sk-ant-testkey', `Failed for URL: ${url}`);
       assert.strictEqual(env['ANTHROPIC_API_KEY'], '', `Failed for URL: ${url}`);
+    }
+  });
+
+  test('resolveConfig should set CLAUDE_CONFIG_DIR and create it if not dry-run', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-test-'));
+    const testConfigDir = path.join(tempDir, 'claude');
+    process.env[ENV_CLAUDE_CONFIG_DIR] = testConfigDir;
+
+    try {
+      const config: GatewayConfig = {
+        env: {
+          ANTHROPIC_API_KEY: 'sk-ant-testkey',
+          ANTHROPIC_BASE_URL: 'https://api.anthropic.com',
+        },
+      };
+
+      const resolved = await launcher.resolveConfig(
+        config,
+        'anthropic',
+        'sk-ant-testkey',
+        'claude-model',
+      );
+
+      assert.strictEqual(resolved.env[ENV_CLAUDE_CONFIG_DIR], testConfigDir);
+      assert.ok(fs.existsSync(testConfigDir), 'Claude config directory should be created');
+    } finally {
+      delete process.env[ENV_CLAUDE_CONFIG_DIR];
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (_) {}
     }
   });
 });

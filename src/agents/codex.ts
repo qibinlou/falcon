@@ -1,10 +1,14 @@
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import type { GatewayConfig } from '../gateways/index.js';
 import type { AgentLauncher, ResolvedConfig, SpawnConfig } from './index.js';
 import { startBifrost } from './shared/bifrost.js';
-import { DEFAULT_OPENAI_BASE_URL } from '../constants.js';
+import {
+  DEFAULT_OPENAI_BASE_URL,
+  ENV_FALCON_DIR,
+  ENV_CODEX_HOME,
+  DEFAULT_FALCON_DIR,
+} from '../constants.js';
 
 export class CodexLauncher implements AgentLauncher {
   name = 'Codex';
@@ -35,9 +39,11 @@ export class CodexLauncher implements AgentLauncher {
       }
     }
 
+    env[ENV_CODEX_HOME] = this.getCodexDir();
+
     if (model) {
       try {
-        ensureCodexConfig(model, baseUrl, env['OPENAI_BASE_URL']);
+        ensureCodexConfig(env[ENV_CODEX_HOME], model, baseUrl, env['OPENAI_BASE_URL']);
       } catch (err) {
         console.error(
           `Warning: Failed to configure Codex: ${err instanceof Error ? err.message : err}`,
@@ -57,7 +63,7 @@ export class CodexLauncher implements AgentLauncher {
     model: string,
     extraArgs: string[],
   ): SpawnConfig {
-    const codexDir = process.env['CODEX_HOME'] || path.join(os.homedir(), '.codex');
+    const codexDir = this.getCodexDir();
     const catalogPath = path.join(codexDir, 'model.json');
 
     const args: string[] = ['--profile', 'falcon'];
@@ -73,6 +79,11 @@ export class CodexLauncher implements AgentLauncher {
       env: resolvedConfig.env,
       cleanup: resolvedConfig.cleanup,
     };
+  }
+
+  private getCodexDir(): string {
+    const falconDir = process.env[ENV_FALCON_DIR] || DEFAULT_FALCON_DIR;
+    return process.env[ENV_CODEX_HOME] || path.join(falconDir, this.slug);
   }
 }
 
@@ -191,11 +202,11 @@ function upsertSection(text: string, header: string, lines: string[]): string {
 }
 
 function ensureCodexConfig(
+  codexDir: string,
   modelName: string,
   resolvedBaseUrl?: string,
   envBaseUrl?: string,
 ): string {
-  const codexDir = process.env['CODEX_HOME'] || path.join(os.homedir(), '.codex');
   if (!fs.existsSync(codexDir)) {
     fs.mkdirSync(codexDir, { recursive: true, mode: 0o700 });
   }

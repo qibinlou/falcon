@@ -3,12 +3,18 @@
  * surfaced at the top of the model picker across CLI sessions.
  */
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 import type { ModelInfo } from './gateways/index.js';
+import { ENV_FALCON_DIR, DEFAULT_FALCON_DIR } from './constants.js';
 
-const FALCON_DIR = path.join(os.homedir(), '.falcon');
-const RECENTS_FILE = path.join(FALCON_DIR, 'recents.json');
+function getFalconDir(): string {
+  return process.env[ENV_FALCON_DIR] || DEFAULT_FALCON_DIR;
+}
+
+function getRecentsFile(): string {
+  return path.join(getFalconDir(), 'recents.json');
+}
+
 const MAX_RECENTS = 5;
 
 interface RecentEntry {
@@ -23,7 +29,7 @@ interface RecentEntry {
 
 function readRecents(): RecentEntry[] {
   try {
-    const raw = fs.readFileSync(RECENTS_FILE, 'utf8');
+    const raw = fs.readFileSync(getRecentsFile(), 'utf8');
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as RecentEntry[]) : [];
   } catch {
@@ -32,11 +38,12 @@ function readRecents(): RecentEntry[] {
 }
 
 function writeRecents(entries: RecentEntry[]): void {
+  const falconDir = getFalconDir();
   try {
-    if (!fs.existsSync(FALCON_DIR)) {
-      fs.mkdirSync(FALCON_DIR, { recursive: true });
+    if (!fs.existsSync(falconDir)) {
+      fs.mkdirSync(falconDir, { recursive: true });
     }
-    fs.writeFileSync(RECENTS_FILE, JSON.stringify(entries, null, 2), 'utf8');
+    fs.writeFileSync(getRecentsFile(), JSON.stringify(entries, null, 2), 'utf8');
   } catch {
     // Non-fatal: recents are best-effort
   }

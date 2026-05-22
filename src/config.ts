@@ -2,15 +2,16 @@ import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { ENV_FALCON_DIR, ENV_FALCON_CONFIG_FILE, DEFAULT_FALCON_DIR } from './constants.js';
 
 const ALGORITHM = 'aes-256-cbc';
 
 function getFalconDir(): string {
-  return process.env.FALCON_DIR || path.join(os.homedir(), '.falcon');
+  return process.env[ENV_FALCON_DIR] || DEFAULT_FALCON_DIR;
 }
 
 function getConfigFile(): string {
-  return process.env.FALCON_CONFIG_FILE || path.join(getFalconDir(), 'config.json');
+  return process.env[ENV_FALCON_CONFIG_FILE] || path.join(getFalconDir(), 'config.json');
 }
 
 function getEncryptionKey(): Buffer {

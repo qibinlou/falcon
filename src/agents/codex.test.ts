@@ -5,6 +5,7 @@ import os from 'os';
 import path from 'path';
 import type { GatewayConfig } from '../gateways/index.js';
 import { CodexLauncher } from './codex.js';
+import { ENV_CODEX_HOME } from '../constants.js';
 
 describe('Codex Agent Launcher', () => {
   let tempDir: string;
@@ -12,16 +13,16 @@ describe('Codex Agent Launcher', () => {
   const launcher = new CodexLauncher();
 
   before(() => {
-    originalCodexHome = process.env['CODEX_HOME'];
+    originalCodexHome = process.env[ENV_CODEX_HOME];
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-test-'));
-    process.env['CODEX_HOME'] = tempDir;
+    process.env[ENV_CODEX_HOME] = tempDir;
   });
 
   after(() => {
     if (originalCodexHome !== undefined) {
-      process.env['CODEX_HOME'] = originalCodexHome;
+      process.env[ENV_CODEX_HOME] = originalCodexHome;
     } else {
-      delete process.env['CODEX_HOME'];
+      delete process.env[ENV_CODEX_HOME];
     }
     // Clean up tempDir
     if (fs.existsSync(tempDir)) {
@@ -47,6 +48,7 @@ describe('Codex Agent Launcher', () => {
     assert.deepStrictEqual(resolved.env, {
       OPENAI_API_KEY: 'sk-openai-key',
       OPENAI_BASE_URL: 'https://api.openai.com/v1',
+      [ENV_CODEX_HOME]: tempDir,
     });
 
     const spawnConfig = launcher.buildSpawnConfig(resolved, 'gpt-4o', ['--verbose']);
