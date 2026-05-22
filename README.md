@@ -1,0 +1,181 @@
+# 🦅 Falcon — May your tokens never run out.
+
+> Launch any coding agent with any LLM in absolute privacy.
+
+[![npm version](https://img.shields.io/badge/npm-1.0.0-blue.svg?style=flat-square&color=0a0a0c)](https://www.npmjs.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg?style=flat-square&color=6e5aff)](LICENSE)
+[![Built with TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg?style=flat-square&color=3178c6)](https://www.typescriptlang.org/)
+[![UI: Ink](https://img.shields.io/badge/UI-Ink%20%26%20React-red.svg?style=flat-square&color=ff5a5f)](https://github.com/vadimdemedes/ink)
+[![Agent: Codex](https://img.shields.io/badge/Agent-Codex-orange.svg?style=flat-square&color=00a67e)](https://github.com/openai/codex)
+[![Agent: Claude Code](https://img.shields.io/badge/Agent-Claude%20Code-orange.svg?style=flat-square&color=cc9900)](https://docs.anthropic.com/en/docs/claude-code)
+[![LLM Providers: All](https://img.shields.io/badge/LLM%20Providers-All-brightgreen.svg?style=flat-square&color=16d3b4)](#-environment-configuration--api-gateways)
+
+Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenAI Codex](https://github.com/openai/codex)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
+
+---
+
+## 🎯 Why Falcon?
+
+*   **API Gateway Abstraction**: No more memorizing gateway endpoints or manual token configurations. Falcon automatically maps models and manages API endpoints across OpenAI, Anthropic, OpenRouter, and Cloudflare AI Gateway.
+*   **Bifrost Translation Engine**: Want to run Anthropic's Claude Code using an OpenAI API key? Or run Codex using an Anthropic endpoint? Falcon utilizes a built-in proxy engine (`@maximhq/bifrost`) under the hood to automatically translate Anthropic's messaging protocol to OpenAI's completion format and vice-versa.
+*   **TUI Model Catalog Explorer**: Search and filter through hundreds of models in a rich, keyboard-navigable terminal interface. View context lengths, modalities (text/vision), and token pricing directly before launching your agent.
+*   **Security & Encryption**: Your API keys are encrypted at rest using platform-specific material and AES-256-CBC, stored securely under `~/.falcon/config.json`.
+*   **Opt-Out Telemetry by Default**: Respects your privacy. Falcon automatically configures downstream agents to run in full privacy mode, disabling analytics, feedback prompts, telemetry, and non-essential external connections.
+*   **Pass-Through Command Forwarding**: Respects native options. Any extra flag or argument passed to Falcon is forwarded directly to the underlying agent binary.
+
+> [!IMPORTANT]
+> **Privacy by default**: Falcon automatically sets `DISABLE_TELEMETRY=1`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, and overrides Codex metrics inside `config.toml` to protect your source code and configurations.
+
+---
+
+## 🚀 Quick Start
+
+Ensure you have [Node.js](https://nodejs.org/) installed (v22+ recommended).
+
+### 1. Installation
+
+```bash
+git clone https://github.com/sprite/falcon.git
+cd falcon
+npm install
+```
+
+### 2. Configure Your Keys
+
+Falcon automatically detects keys from your environment. Simply set any of the following:
+
+```bash
+export OPENROUTER_API_KEY="sk-or-..."
+export OPENAI_API_KEY="sk-proj-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+*(Alternatively, run in interactive mode to add and encrypt your gateways via the TUI!)*
+
+### 3. Run Falcon
+
+```bash
+# Start in interactive mode to pick agent and gateway
+npm run dev -- launch
+
+# Shorthand to run Claude Code with interactive model picker
+npm run dev -- launch claude
+
+# Shorthand to run Codex
+npm run dev -- launch codex
+
+# Launch with a specific model directly (skips TUI)
+npm run dev -- launch claude --model claude-3-5-sonnet-latest
+
+# Launch with a specific model using a specific gateway
+npm run dev -- launch codex --gateway openrouter --model deepseek/deepseek-v4-flash:free
+
+# Run a dry run to inspect final command and environment variables
+npm run dev -- launch claude --model claude-3-5-haiku --dry-run
+```
+
+> [!TIP]
+> Use the `--dry-run` flag to preview your configuration, Bifrost port forwarding, and exact executable parameters without launching the interactive loop.
+
+---
+
+## 💻 CLI Commands & Options Reference
+
+### Commands
+
+| Command | Description |
+| :--- | :--- |
+| `falcon launch [agent] [options] [agentArgs...]` | Launches a coding agent (e.g. `codex` or `claude`) with options. |
+| `falcon codex [options] [agentArgs...]` | Shorthand to launch OpenAI Codex directly. |
+| `falcon claude [options] [agentArgs...]` | Shorthand to launch Claude Code directly. |
+| `falcon models [options]` | Query and list available models from detected API gateways. |
+
+### Launch Options
+
+| Option | Shorthand | Description |
+| :--- | :--- | :--- |
+| `--model <model>` | `-m` | Skip interactive picker and launch directly with the specified model name. |
+| `--gateway <gateway>` | `-g` | Specific API gateway to route requests (`openrouter`, `openai`, `anthropic`, `cloudflare`). |
+| `--dry-run` | — | Print final environment config, bridge ports, and command string without starting the agent. |
+| `--list-gateways` | — | Display all detected API keys and active gateways, then exit. |
+
+---
+
+## 🔑 Environment Configuration & API Gateways
+
+Falcon leverages environment variables to identify and initialize connections to various providers:
+
+| Gateway | Env Variable(s) | Supported Features |
+| :--- | :--- | :--- |
+| **OpenRouter** | `OPENROUTER_API_KEY` | Fetches live model catalog (200+ models), prices, and context windows. Generates OpenAI and Anthropic compatible bridges. |
+| **OpenAI** | `OPENAI_API_KEY`<br>`OPENAI_BASE_URL` (optional) | Live fetches native OpenAI/compatible catalog including reasoning models. |
+| **Anthropic** | `ANTHROPIC_API_KEY`<br>`ANTHROPIC_BASE_URL` (optional) | Queries official Anthropic models with rich metadata catalog. |
+| **Cloudflare AI Gateway** | `CLOUDFLARE_API_KEY` or `CF_API_KEY`<br>`CLOUDFLARE_ACCOUNT_ID`<br>`CLOUDFLARE_GATEWAY_ID` | Routes requests through Cloudflare's secure AI proxy, auto-injecting gateway custom headers. |
+
+---
+
+## 📂 Codebase & Architecture
+
+Falcon is structured to make extending gateways and agents straightforward:
+
+*   **[src/cli.ts](./src/cli.ts)**: Command line router and entry point utilizing Commander.js.
+*   **[src/config.ts](./src/config.ts)**: Implements AES-256-CBC encryption to store credentials locally in `~/.falcon/config.json`.
+*   **[src/agents/](./src/agents/)**: Agent wrappers implementing `AgentLauncher` profile compilation and launch arguments.
+    *   [claude.ts](./src/agents/claude.ts): Disables Claude telemetry/feedback and forces full privacy.
+    *   [codex.ts](./src/agents/codex.ts): Updates Codex's `config.toml` profiles, `model.json` catalog and disables analytics.
+*   **[src/gateways/](./src/gateways/)**: Providers logic matching API payloads to model metadata lists.
+*   **[src/ui/](./src/ui/)**: Reactive terminal components built on Ink and React.
+
+---
+
+## 🧩 Extending Falcon
+
+### 1. Add a New Agent
+1. Create a class implementing the `AgentLauncher` interface under `src/agents/`.
+2. Define:
+    *   `name`: Display name.
+    *   `slug`: CLI identifier.
+    *   `resolveConfig(...)`: Configure settings, environment variables, or start proxy bridges.
+    *   `buildSpawnConfig(...)`: Define command execution arguments.
+3. Add the instance to `ALL_AGENTS` inside [src/agents/index.ts](./src/agents/index.ts).
+
+### 2. Add a New API Gateway
+1. Create a class implementing the `Gateway` interface under `src/gateways/`.
+2. Define:
+    *   `name` & `slug`.
+    *   `detectKey()`: Auto-detect API key variables.
+    *   `listModels(apiKey)`: Fetch models from the endpoint.
+    *   `getEnvConfig(apiKey, model)`: Construct the proxy environment routing details.
+3. Add the instance to `ALL_GATEWAYS` inside [src/gateways/index.ts](./src/gateways/index.ts).
+
+---
+
+## 🛠️ Development & QA
+
+Manage the development loop with the following scripts:
+
+```bash
+# Compile and check TypeScript types
+npm run check:types
+
+# Format and autofix codebase with Biome
+npm run check:format
+
+# Lint codebase with Biome
+npm run check:lint
+
+# Run all unit tests
+npm run test
+
+# Run end-to-end (e2e) tests
+npm run e2e
+
+# Compile production bundle
+npm run build
+```
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See [LICENSE](LICENSE) for more details.

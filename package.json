@@ -1,0 +1,50 @@
+{
+  "name": "falconsh",
+  "version": "1.0.0",
+  "description": "Run any coding agent with any LLM in absolute privacy.",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "falconsh": "./dist/cli.js",
+    "falcon": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsup src/cli.ts --format esm --target node22 --clean && node -e \"const fs=require('fs');const f='dist/cli.js';fs.writeFileSync(f,'#!/usr/bin/env node\\n'+fs.readFileSync(f));\" && chmod +x dist/cli.js",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "e2e": "bash e2e/run.sh",
+    "check:types": "tsc --noEmit",
+    "check:format": "biome format --fix src e2e",
+    "check:lint": "biome lint --fix src e2e",
+    "check:all": "npm run check:types && npm run check:format && npm run check:lint",
+    "launch:claude-auth-status": "npm run dev -- launch claude -m auto auth status",
+    "launch:claude-it": "npm run dev -- launch claude --verbose -m deepseek/deepseek-v4-flash:free",
+    "launch:claude-with-prompt": "npm run dev -- launch claude --verbose -m deepseek/deepseek-v4-flash:free -p 'Who is your model maker?' ",
+    "launch:claude-with-anthropic-gateway": "npm run dev -- launch claude --verbose -m claude-haiku-4-5 -p 'Who is your model maker?' ",
+    "launch:codex-auth-status": "export CODEX_HOME=~/.falcon/codex && npm run dev -- launch codex -m auto login status",
+    "launch:codex-it": "export CODEX_HOME=~/.falcon/codex && npm run dev -- launch codex -m deepseek/deepseek-v4-flash:free"
+  },
+  "dependencies": {
+    "@maximhq/bifrost": "1.6.3",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "ink": "^7.0.3",
+    "ink-text-input": "^6.0.0",
+    "react": "^19.2.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.15",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "tsup": "^8.5.1",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}
