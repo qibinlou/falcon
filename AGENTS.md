@@ -166,4 +166,4 @@ node dist/cli.js launch <agent> [options]
 ## Agentic Workflow Rules
 - Don't run `npm run build` or `npm run dev` unless explicitly asked.
 - I haven't release the software to public yet, so it's safe to make breaking changes if needed.
-- Always use the co-author approach when helping to create a commit by adding a `Co-authored-by:` trailer at the end of the commit message.
+- When explicitly asked to create a commit, use the co-author approach by adding a `Co-authored-by:` trailer at the end of the commit message.
