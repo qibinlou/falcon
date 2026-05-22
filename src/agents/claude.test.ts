@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import type { GatewayConfig } from '../gateways/index.js';
 import { ClaudeLauncher } from './claude.js';
-import { ENV_CLAUDE_CONFIG_DIR } from '../constants.js';
+import { ENV_CLAUDE_CONFIG_DIR, ENV_FALCON_DIR, DEFAULT_FALCON_DIR } from '../constants.js';
 
 describe('Claude Agent Launcher', () => {
   const launcher = new ClaudeLauncher();
@@ -169,6 +169,87 @@ describe('Claude Agent Launcher', () => {
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
       } catch (_) {}
+    }
+  });
+
+  test('resolveConfig should fallback to FALCON_DIR/claude when CLAUDE_CONFIG_DIR is not set', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-test-'));
+    const originalFalconDir = process.env[ENV_FALCON_DIR];
+    const originalClaudeConfigDir = process.env[ENV_CLAUDE_CONFIG_DIR];
+
+    process.env[ENV_FALCON_DIR] = tempDir;
+    delete process.env[ENV_CLAUDE_CONFIG_DIR];
+
+    try {
+      const config: GatewayConfig = {
+        env: {
+          ANTHROPIC_API_KEY: 'sk-ant-testkey',
+          ANTHROPIC_BASE_URL: 'https://api.anthropic.com',
+        },
+      };
+
+      const resolved = await launcher.resolveConfig(
+        config,
+        'anthropic',
+        'sk-ant-testkey',
+        'claude-model',
+      );
+
+      const expectedDir = path.join(tempDir, 'claude');
+      assert.strictEqual(resolved.env[ENV_CLAUDE_CONFIG_DIR], expectedDir);
+      assert.ok(
+        fs.existsSync(expectedDir),
+        'Claude config directory should be created in FALCON_DIR',
+      );
+    } finally {
+      if (originalFalconDir !== undefined) {
+        process.env[ENV_FALCON_DIR] = originalFalconDir;
+      } else {
+        delete process.env[ENV_FALCON_DIR];
+      }
+      if (originalClaudeConfigDir !== undefined) {
+        process.env[ENV_CLAUDE_CONFIG_DIR] = originalClaudeConfigDir;
+      } else {
+        delete process.env[ENV_CLAUDE_CONFIG_DIR];
+      }
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (_) {}
+    }
+  });
+
+  test('resolveConfig should fallback to DEFAULT_FALCON_DIR/claude when neither is set', async () => {
+    const originalFalconDir = process.env[ENV_FALCON_DIR];
+    const originalClaudeConfigDir = process.env[ENV_CLAUDE_CONFIG_DIR];
+
+    delete process.env[ENV_FALCON_DIR];
+    delete process.env[ENV_CLAUDE_CONFIG_DIR];
+
+    try {
+      const config: GatewayConfig = {
+        env: {
+          ANTHROPIC_API_KEY: 'sk-ant-testkey',
+          ANTHROPIC_BASE_URL: 'https://api.anthropic.com',
+        },
+      };
+
+      const resolved = await launcher.resolveConfig(
+        config,
+        'anthropic',
+        'sk-ant-testkey',
+        'claude-model',
+        { dryRun: true },
+      );
+
+      const expectedDir = path.join(DEFAULT_FALCON_DIR, 'claude');
+      assert.strictEqual(resolved.env[ENV_CLAUDE_CONFIG_DIR], expectedDir);
+    } finally {
+      if (originalFalconDir !== undefined) {
+        process.env[ENV_FALCON_DIR] = originalFalconDir;
+      }
+      if (originalClaudeConfigDir !== undefined) {
+        process.env[ENV_CLAUDE_CONFIG_DIR] = originalClaudeConfigDir;
+      }
     }
   });
 });

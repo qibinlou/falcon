@@ -72,6 +72,19 @@ describe('Dry Run — Claude + OpenRouter', () => {
     // ANTHROPIC_BASE_URL is present in the environment section (may be masked)
     assertContains(r.stdout + r.stderr, 'ANTHROPIC_BASE_URL', 'ANTHROPIC_BASE_URL env key');
   });
+
+  it('shows isolated CLAUDE_CONFIG_DIR in environment output', (ctx) => {
+    const skip = missingKey('OPENROUTER_API_KEY');
+    if (skip) return ctx.skip(skip);
+
+    const key = getKey('OPENROUTER_API_KEY') ?? '';
+    const r = spawnCli(['launch', 'claude', '-m', MODEL, '-g', GW, '--dry-run'], {
+      env: buildEnv({ OPENROUTER_API_KEY: key }),
+    });
+    const out = r.stdout + r.stderr;
+    assertContains(out, 'CLAUDE_CONFIG_DIR', 'CLAUDE_CONFIG_DIR env key');
+    assertContains(out, 'aude', 'CLAUDE_CONFIG_DIR value ends with claude (or masked)');
+  });
 });
 
 describe('Dry Run — Codex + OpenRouter', () => {
@@ -104,6 +117,19 @@ describe('Dry Run — Codex + OpenRouter', () => {
     });
     // OPENAI_BASE_URL is present in the environment section
     assertContains(r.stdout + r.stderr, 'OPENAI_BASE_URL', 'OPENAI_BASE_URL env key');
+  });
+
+  it('shows isolated CODEX_HOME in environment output', (ctx) => {
+    const skip = missingKey('OPENROUTER_API_KEY');
+    if (skip) return ctx.skip(skip);
+
+    const key = getKey('OPENROUTER_API_KEY') ?? '';
+    const r = spawnCli(['launch', 'codex', '-m', MODEL, '-g', GW, '--dry-run'], {
+      env: buildEnv({ OPENROUTER_API_KEY: key }),
+    });
+    const out = r.stdout + r.stderr;
+    assertContains(out, 'CODEX_HOME', 'CODEX_HOME env key');
+    assertContains(out, 'odex', 'CODEX_HOME value ends with codex (or masked)');
   });
 });
 
@@ -224,6 +250,44 @@ describe('Dry Run — Extra args pass-through', () => {
     assertExitCode(r, 0);
     assertContains(r.stdout + r.stderr, 'login', 'extra arg: login');
     assertContains(r.stdout + r.stderr, 'status', 'extra arg: status');
+  });
+});
+
+// ─── Custom Config Directories ────────────────────────────────────────────────
+
+describe('Dry Run — Custom Config Directories', () => {
+  const MODEL = 'deepseek/deepseek-v4-flash:free';
+
+  it('honors pre-existing CLAUDE_CONFIG_DIR in environment', (ctx) => {
+    const skip = missingKey('OPENROUTER_API_KEY');
+    if (skip) return ctx.skip(skip);
+
+    const key = getKey('OPENROUTER_API_KEY') ?? '';
+    const customDir = '/tmp/ccdir';
+    const r = spawnCli(['launch', 'claude', '-m', MODEL, '-g', 'openrouter', '--dry-run'], {
+      env: {
+        ...buildEnv({ OPENROUTER_API_KEY: key }),
+        CLAUDE_CONFIG_DIR: customDir,
+      },
+    });
+    const out = r.stdout + r.stderr;
+    assertContains(out, 'CLAUDE_CONFIG_DIR=/tmp/ccdir', 'custom CLAUDE_CONFIG_DIR preserved');
+  });
+
+  it('honors pre-existing CODEX_HOME in environment', (ctx) => {
+    const skip = missingKey('OPENROUTER_API_KEY');
+    if (skip) return ctx.skip(skip);
+
+    const key = getKey('OPENROUTER_API_KEY') ?? '';
+    const customDir = '/tmp/cxdir';
+    const r = spawnCli(['launch', 'codex', '-m', MODEL, '-g', 'openrouter', '--dry-run'], {
+      env: {
+        ...buildEnv({ OPENROUTER_API_KEY: key }),
+        CODEX_HOME: customDir,
+      },
+    });
+    const out = r.stdout + r.stderr;
+    assertContains(out, 'CODEX_HOME=/tmp/cxdir', 'custom CODEX_HOME preserved');
   });
 });
 

@@ -5,7 +5,7 @@ import os from 'os';
 import path from 'path';
 import type { GatewayConfig } from '../gateways/index.js';
 import { CodexLauncher } from './codex.js';
-import { ENV_CODEX_HOME } from '../constants.js';
+import { ENV_CODEX_HOME, ENV_FALCON_DIR, DEFAULT_FALCON_DIR } from '../constants.js';
 
 describe('Codex Agent Launcher', () => {
   let tempDir: string;
@@ -112,5 +112,77 @@ describe('Codex Agent Launcher', () => {
     assert.ok(configContent.includes('model = "claude-sonnet-4-20250514"'));
     assert.ok(configContent.includes('model_provider = "localhost"'));
     assert.ok(configContent.includes('base_url = "http://localhost:<BIFROST_PORT>/openai/"'));
+  });
+
+  test('resolveConfig should fallback to FALCON_DIR/codex when CODEX_HOME is not set', async () => {
+    const falconTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-test-'));
+    const originalFalconDir = process.env[ENV_FALCON_DIR];
+    const originalCodexHome = process.env[ENV_CODEX_HOME];
+
+    process.env[ENV_FALCON_DIR] = falconTempDir;
+    delete process.env[ENV_CODEX_HOME];
+
+    try {
+      const config: GatewayConfig = {
+        env: {
+          OPENAI_API_KEY: 'sk-openai-key',
+          OPENAI_BASE_URL: 'https://api.openai.com/v1',
+        },
+      };
+
+      const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'gpt-4o');
+
+      const expectedDir = path.join(falconTempDir, 'codex');
+      assert.strictEqual(resolved.env[ENV_CODEX_HOME], expectedDir);
+      assert.ok(
+        fs.existsSync(expectedDir),
+        'Codex config directory should be created in FALCON_DIR',
+      );
+    } finally {
+      if (originalFalconDir !== undefined) {
+        process.env[ENV_FALCON_DIR] = originalFalconDir;
+      } else {
+        delete process.env[ENV_FALCON_DIR];
+      }
+      if (originalCodexHome !== undefined) {
+        process.env[ENV_CODEX_HOME] = originalCodexHome;
+      } else {
+        delete process.env[ENV_CODEX_HOME];
+      }
+      try {
+        fs.rmSync(falconTempDir, { recursive: true, force: true });
+      } catch (_) {}
+    }
+  });
+
+  test('resolveConfig should fallback to DEFAULT_FALCON_DIR/codex when neither is set', async () => {
+    const originalFalconDir = process.env[ENV_FALCON_DIR];
+    const originalCodexHome = process.env[ENV_CODEX_HOME];
+
+    delete process.env[ENV_FALCON_DIR];
+    delete process.env[ENV_CODEX_HOME];
+
+    try {
+      const config: GatewayConfig = {
+        env: {
+          OPENAI_API_KEY: 'sk-openai-key',
+          OPENAI_BASE_URL: 'https://api.openai.com/v1',
+        },
+      };
+
+      const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'gpt-4o', {
+        dryRun: true,
+      });
+
+      const expectedDir = path.join(DEFAULT_FALCON_DIR, 'codex');
+      assert.strictEqual(resolved.env[ENV_CODEX_HOME], expectedDir);
+    } finally {
+      if (originalFalconDir !== undefined) {
+        process.env[ENV_FALCON_DIR] = originalFalconDir;
+      }
+      if (originalCodexHome !== undefined) {
+        process.env[ENV_CODEX_HOME] = originalCodexHome;
+      }
+    }
   });
 });
