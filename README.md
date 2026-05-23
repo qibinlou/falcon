@@ -2,7 +2,7 @@
 
 > Launch any coding agent with any LLM in absolute privacy.
 
-[![npm version](https://img.shields.io/badge/npm-1.0.0-blue.svg?style=flat-square&color=0a0a0c)](https://www.npmjs.com/)
+[![npm version](https://img.shields.io/badge/npm-1.0.0-blue.svg?style=flat-square&color=0a0a0c)](https://www.npmjs.com/package/falconsh)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg?style=flat-square&color=6e5aff)](LICENSE)
 [![Built with TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg?style=flat-square&color=3178c6)](https://www.typescriptlang.org/)
 [![UI: Ink](https://img.shields.io/badge/UI-Ink%20%26%20React-red.svg?style=flat-square&color=ff5a5f)](https://github.com/vadimdemedes/ink)
@@ -32,12 +32,39 @@ Falcon is an elegant command-line interface (CLI) and interactive Terminal User 
 
 Ensure you have [Node.js](https://nodejs.org/) installed (v22+ recommended).
 
-### 1. Installation
+### 1. Installation & Usage
 
+Falcon is published on npm as [`falconsh`](https://www.npmjs.com/package/falconsh). You can run it directly without installing, install it globally, or run/develop it from source.
+
+#### Option A: Run directly with `npx` (No installation needed)
 ```bash
-git clone https://github.com/sprite/falcon.git
+npx falconsh launch
+```
+
+#### Option B: Global Installation
+Install the package globally:
+```bash
+# npm
+npm install -g falconsh
+
+# pnpm
+pnpm add -g falconsh
+
+# bun
+bun add -g falconsh
+```
+Once installed, you can use the `falcon` command directly:
+```bash
+falcon launch
+```
+
+#### Option C: Run from Source (Development Setup)
+```bash
+git clone https://github.com/qibinlou/falcon.git
 cd falcon
-npm install
+
+# Install dependencies using your preferred package manager:
+npm install   # or pnpm install / bun install
 ```
 
 ### 2. Configure Your Keys
@@ -54,24 +81,26 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 ### 3. Run Falcon
 
+You can run Falcon using `npx falconsh`, globally via `falcon`, or from source (using `npm run dev --` in place of `falcon`):
+
 ```bash
 # Start in interactive mode to pick agent and gateway
-npm run dev -- launch
+falcon launch
 
 # Shorthand to run Claude Code with interactive model picker
-npm run dev -- launch claude
+falcon launch claude
 
 # Shorthand to run Codex
-npm run dev -- launch codex
+falcon launch codex
 
 # Launch with a specific model directly (skips TUI)
-npm run dev -- launch claude --model claude-3-5-sonnet-latest
+falcon launch claude --model claude-3-5-sonnet-latest
 
 # Launch with a specific model using a specific gateway
-npm run dev -- launch codex --gateway openrouter --model deepseek/deepseek-v4-flash:free
+falcon launch codex --gateway openrouter --model deepseek/deepseek-v4-flash:free
 
 # Run a dry run to inspect final command and environment variables
-npm run dev -- launch claude --model claude-3-5-haiku --dry-run
+falcon launch claude --model claude-3-5-haiku --dry-run
 ```
 
 > [!TIP]

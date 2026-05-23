@@ -22,6 +22,12 @@ Read [PRD](./PRD.md) to learn more about product requirements and vision.
 
 ## 🚀 Quick Start
 
+Falcon is published publicly on npm at [`falconsh`](https://www.npmjs.com/package/falconsh). You can run it without installing using:
+```bash
+npx falconsh launch <agent>
+```
+Or you can install it globally via `npm install -g falconsh` and run it using the `falcon` command directly.
+
 To launch an agent using the interactive model picker:
 
 ```bash
