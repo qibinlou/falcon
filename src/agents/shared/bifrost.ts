@@ -89,3 +89,7 @@ export async function startBifrost(
     cleanup,
   };
 }
+
+export const bifrost = {
+  startBifrost,
+};

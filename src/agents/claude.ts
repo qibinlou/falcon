@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { GatewayConfig } from '../gateways/index.js';
 import type { AgentLauncher, ResolvedConfig, SpawnConfig } from './index.js';
-import { startBifrost } from './shared/bifrost.js';
+import { bifrost } from './shared/bifrost.js';
 import {
   DEFAULT_ANTHROPIC_BASE_URL,
   ENV_FALCON_DIR,
@@ -19,21 +19,15 @@ export class ClaudeLauncher implements AgentLauncher {
     gatewaySlug: string,
     apiKey: string,
     model: string,
-    options?: { dryRun?: boolean },
   ): Promise<ResolvedConfig> {
     const env: Record<string, string> = { ...gatewayConfig.env };
     let cleanup: (() => void) | undefined;
 
     if (gatewaySlug === 'openai') {
-      if (options?.dryRun) {
-        env['ANTHROPIC_BASE_URL'] = 'http://localhost:<BIFROST_PORT>/anthropic';
-        env['ANTHROPIC_API_KEY'] = apiKey;
-      } else {
-        const bifrost = await startBifrost('openai', apiKey);
-        env['ANTHROPIC_BASE_URL'] = `http://localhost:${bifrost.port}/anthropic`;
-        env['ANTHROPIC_API_KEY'] = apiKey;
-        cleanup = bifrost.cleanup;
-      }
+      const bifrostInstance = await bifrost.startBifrost('openai', apiKey);
+      env['ANTHROPIC_BASE_URL'] = `http://localhost:${bifrostInstance.port}/anthropic`;
+      env['ANTHROPIC_API_KEY'] = apiKey;
+      cleanup = bifrostInstance.cleanup;
     }
 
     const baseUrl = env['ANTHROPIC_BASE_URL'];
@@ -70,10 +64,8 @@ export class ClaudeLauncher implements AgentLauncher {
     const claudeDir = process.env[ENV_CLAUDE_CONFIG_DIR] || path.join(falconDir, this.slug);
     env[ENV_CLAUDE_CONFIG_DIR] = claudeDir;
 
-    if (!options?.dryRun) {
-      if (!fs.existsSync(claudeDir)) {
-        fs.mkdirSync(claudeDir, { recursive: true, mode: 0o700 });
-      }
+    if (!fs.existsSync(claudeDir)) {
+      fs.mkdirSync(claudeDir, { recursive: true, mode: 0o700 });
     }
 
     return {

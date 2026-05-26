@@ -45,7 +45,6 @@ describe('CLI Contract', () => {
     assertExitCode(r, 0);
     assertContains(r.stdout, '--model', 'launch --help');
     assertContains(r.stdout, '--gateway', 'launch --help');
-    assertContains(r.stdout, '--dry-run', 'launch --help');
   });
 
   it('models --help exits 0 and mentions gateway option', () => {

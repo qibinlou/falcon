@@ -1,6 +1,6 @@
 import assert from 'node:assert';
-import { describe, test } from 'node:test';
-import * as fs from 'node:fs';
+import { describe, test, mock } from 'node:test';
+import fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import type { GatewayConfig } from '../gateways/index.js';
@@ -142,7 +142,7 @@ describe('Claude Agent Launcher', () => {
     }
   });
 
-  test('resolveConfig should set CLAUDE_CONFIG_DIR and create it if not dry-run', async () => {
+  test('resolveConfig should set CLAUDE_CONFIG_DIR and create it', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-test-'));
     const testConfigDir = path.join(tempDir, 'claude');
     process.env[ENV_CLAUDE_CONFIG_DIR] = testConfigDir;
@@ -225,6 +225,10 @@ describe('Claude Agent Launcher', () => {
     delete process.env[ENV_FALCON_DIR];
     delete process.env[ENV_CLAUDE_CONFIG_DIR];
 
+    // Mock fs.mkdirSync and fs.existsSync to prevent writing to ~/.falcon
+    mock.method(fs, 'mkdirSync', () => {});
+    mock.method(fs, 'existsSync', () => true);
+
     try {
       const config: GatewayConfig = {
         env: {
@@ -238,12 +242,12 @@ describe('Claude Agent Launcher', () => {
         'anthropic',
         'sk-ant-testkey',
         'claude-model',
-        { dryRun: true },
       );
 
       const expectedDir = path.join(DEFAULT_FALCON_DIR, 'claude');
       assert.strictEqual(resolved.env[ENV_CLAUDE_CONFIG_DIR], expectedDir);
     } finally {
+      mock.reset();
       if (originalFalconDir !== undefined) {
         process.env[ENV_FALCON_DIR] = originalFalconDir;
       }

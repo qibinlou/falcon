@@ -1,10 +1,12 @@
 import assert from 'node:assert';
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test, mock } from 'node:test';
+import type { ChildProcess } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import type { GatewayConfig } from '../gateways/index.js';
 import { CodexLauncher } from './codex.js';
+import { bifrost } from './shared/bifrost.js';
 import { ENV_CODEX_HOME, ENV_FALCON_DIR, DEFAULT_FALCON_DIR } from '../constants.js';
 
 describe('Codex Agent Launcher', () => {
@@ -84,7 +86,7 @@ describe('Codex Agent Launcher', () => {
     assert.strictEqual(modelEntry.context_window, 128000);
   });
 
-  test('resolveConfig should handle dryRun or custom base URL configuration when gateway is anthropic', async () => {
+  test('resolveConfig should handle custom base URL configuration when gateway is anthropic', async () => {
     const config: GatewayConfig = {
       env: {
         OPENAI_API_KEY: 'sk-ant-key',
@@ -93,25 +95,37 @@ describe('Codex Agent Launcher', () => {
       baseUrl: 'http://localhost:8080/openai',
     };
 
-    const resolved = await launcher.resolveConfig(
-      config,
-      'anthropic',
-      'sk-ant-key',
-      'claude-sonnet-4-20250514',
-      { dryRun: true },
-    );
-    assert.strictEqual(resolved.baseUrl, 'http://localhost:<BIFROST_PORT>/openai');
+    mock.method(bifrost, 'startBifrost', async () => {
+      return {
+        port: 9999,
+        appDir: '/fake/dir',
+        proc: {} as ChildProcess,
+        cleanup: () => {},
+      };
+    });
 
-    // Check files generated in tempDir
-    const configPath = path.join(tempDir, 'config.toml');
-    assert.ok(fs.existsSync(configPath), 'config.toml should exist');
+    try {
+      const resolved = await launcher.resolveConfig(
+        config,
+        'anthropic',
+        'sk-ant-key',
+        'claude-sonnet-4-20250514',
+      );
+      assert.strictEqual(resolved.baseUrl, 'http://localhost:9999/openai');
 
-    // Verify config.toml contents
-    const configContent = fs.readFileSync(configPath, 'utf8');
-    assert.ok(configContent.includes('[profiles.falcon]'));
-    assert.ok(configContent.includes('model = "claude-sonnet-4-20250514"'));
-    assert.ok(configContent.includes('model_provider = "localhost"'));
-    assert.ok(configContent.includes('base_url = "http://localhost:<BIFROST_PORT>/openai/"'));
+      // Check files generated in tempDir
+      const configPath = path.join(tempDir, 'config.toml');
+      assert.ok(fs.existsSync(configPath), 'config.toml should exist');
+
+      // Verify config.toml contents
+      const configContent = fs.readFileSync(configPath, 'utf8');
+      assert.ok(configContent.includes('[profiles.falcon]'));
+      assert.ok(configContent.includes('model = "claude-sonnet-4-20250514"'));
+      assert.ok(configContent.includes('model_provider = "localhost"'));
+      assert.ok(configContent.includes('base_url = "http://localhost:9999/openai/"'));
+    } finally {
+      mock.reset();
+    }
   });
 
   test('resolveConfig should fallback to FALCON_DIR/codex when CODEX_HOME is not set', async () => {
@@ -162,6 +176,10 @@ describe('Codex Agent Launcher', () => {
     delete process.env[ENV_FALCON_DIR];
     delete process.env[ENV_CODEX_HOME];
 
+    // Mock fs.mkdirSync and fs.existsSync to prevent writing to ~/.falcon
+    mock.method(fs, 'mkdirSync', () => {});
+    mock.method(fs, 'existsSync', () => true);
+
     try {
       const config: GatewayConfig = {
         env: {
@@ -170,13 +188,12 @@ describe('Codex Agent Launcher', () => {
         },
       };
 
-      const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'gpt-4o', {
-        dryRun: true,
-      });
+      const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'gpt-4o');
 
       const expectedDir = path.join(DEFAULT_FALCON_DIR, 'codex');
       assert.strictEqual(resolved.env[ENV_CODEX_HOME], expectedDir);
     } finally {
+      mock.reset();
       if (originalFalconDir !== undefined) {
         process.env[ENV_FALCON_DIR] = originalFalconDir;
       }
@@ -184,5 +201,130 @@ describe('Codex Agent Launcher', () => {
         process.env[ENV_CODEX_HOME] = originalCodexHome;
       }
     }
+  });
+
+  describe('idempotency and file side-effects', () => {
+    let sideEffectDir: string;
+
+    before(() => {
+      sideEffectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-side-effects-'));
+    });
+
+    after(() => {
+      if (fs.existsSync(sideEffectDir)) {
+        fs.rmSync(sideEffectDir, { recursive: true, force: true });
+      }
+    });
+
+    test('should write config.toml and model.json with correct settings', async () => {
+      const config: GatewayConfig = {
+        env: {
+          OPENAI_API_KEY: 'sk-or-fake-key',
+          OPENAI_BASE_URL: 'https://openrouter.ai/api/v1',
+        },
+        baseUrl: 'https://openrouter.ai/api/v1',
+      };
+
+      // Set CODEX_HOME specifically
+      process.env[ENV_CODEX_HOME] = sideEffectDir;
+
+      await launcher.resolveConfig(
+        config,
+        'openrouter',
+        'sk-or-fake-key',
+        'deepseek/deepseek-v4-flash:free',
+      );
+
+      const configPath = path.join(sideEffectDir, 'config.toml');
+      const catalogPath = path.join(sideEffectDir, 'model.json');
+
+      assert.ok(fs.existsSync(configPath), 'config.toml should exist');
+      assert.ok(fs.existsSync(catalogPath), 'model.json should exist');
+
+      const configContent = fs.readFileSync(configPath, 'utf8');
+      assert.ok(configContent.includes('[profiles.falcon]'), 'config.toml missing profiles.falcon');
+      assert.ok(
+        configContent.includes('model = "deepseek/deepseek-v4-flash:free"'),
+        'config.toml missing model',
+      );
+      assert.ok(
+        configContent.includes('forced_login_method = "api"'),
+        'config.toml missing forced_login_method',
+      );
+      assert.ok(configContent.includes('openrouter.ai'), 'config.toml missing openrouter base_url');
+
+      const catalogContent = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+      const entry = catalogContent.models.find(
+        (m: { slug: string }) => m.slug === 'deepseek/deepseek-v4-flash:free',
+      );
+      assert.ok(entry, 'model.json missing entry');
+      assert.ok(entry.context_window > 0, 'context_window should be positive');
+      assert.ok(entry.input_modalities.includes('text'), 'input_modalities should include text');
+    });
+
+    test('re-running is idempotent — no duplicate entries or sections', async () => {
+      const config: GatewayConfig = {
+        env: {
+          OPENAI_API_KEY: 'sk-or-fake-key',
+          OPENAI_BASE_URL: 'https://openrouter.ai/api/v1',
+        },
+        baseUrl: 'https://openrouter.ai/api/v1',
+      };
+
+      process.env[ENV_CODEX_HOME] = sideEffectDir;
+
+      // Run it multiple times
+      await launcher.resolveConfig(
+        config,
+        'openrouter',
+        'sk-or-fake-key',
+        'deepseek/deepseek-v4-flash:free',
+      );
+      await launcher.resolveConfig(
+        config,
+        'openrouter',
+        'sk-or-fake-key',
+        'deepseek/deepseek-v4-flash:free',
+      );
+
+      const configPath = path.join(sideEffectDir, 'config.toml');
+      const catalogPath = path.join(sideEffectDir, 'model.json');
+
+      const configContent = fs.readFileSync(configPath, 'utf8');
+      const matches = configContent.match(/\[profiles\.falcon\]/g) ?? [];
+      assert.strictEqual(matches.length, 1, 'should have exactly one profiles.falcon section');
+
+      const catalogContent = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+      const entries = catalogContent.models.filter(
+        (m: { slug: string }) => m.slug === 'deepseek/deepseek-v4-flash:free',
+      );
+      assert.strictEqual(entries.length, 1, 'should have exactly one model entry');
+    });
+
+    test('different model writes distinct entry without removing old one', async () => {
+      const config: GatewayConfig = {
+        env: {
+          OPENAI_API_KEY: 'sk-or-fake-key',
+          OPENAI_BASE_URL: 'https://openrouter.ai/api/v1',
+        },
+        baseUrl: 'https://openrouter.ai/api/v1',
+      };
+
+      process.env[ENV_CODEX_HOME] = sideEffectDir;
+
+      await launcher.resolveConfig(
+        config,
+        'openrouter',
+        'sk-or-fake-key',
+        'deepseek/deepseek-v4-flash:free',
+      );
+      await launcher.resolveConfig(config, 'openrouter', 'sk-or-fake-key', 'gpt-4o');
+
+      const catalogPath = path.join(sideEffectDir, 'model.json');
+      const catalogContent = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+      const slugs = catalogContent.models.map((m: { slug: string }) => m.slug);
+      assert.ok(slugs.includes('deepseek/deepseek-v4-flash:free'));
+      assert.ok(slugs.includes('gpt-4o'));
+    });
   });
 });

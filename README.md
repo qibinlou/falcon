@@ -94,13 +94,7 @@ falcon launch claude --model claude-3-5-sonnet-latest
 
 # Launch with a specific model using a specific gateway
 falcon launch codex --gateway openrouter --model deepseek/deepseek-v4-flash:free
-
-# Run a dry run to inspect final command and environment variables
-falcon launch claude --model claude-3-5-haiku --dry-run
 ```
-
-> [!TIP]
-> Use the `--dry-run` flag to preview your configuration, Bifrost port forwarding, and exact executable parameters without launching the interactive loop.
 
 ---
 
@@ -121,7 +115,6 @@ falcon launch claude --model claude-3-5-haiku --dry-run
 | :--- | :--- | :--- |
 | `--model <model>` | `-m` | Skip interactive picker and launch directly with the specified model name. |
 | `--gateway <gateway>` | `-g` | Specific API gateway to route requests (`openrouter`, `openai`, `anthropic`, `cloudflare`). |
-| `--dry-run` | — | Print final environment config, bridge ports, and command string without starting the agent. |
 | `--list-gateways` | — | Display all detected API keys and active gateways, then exit. |
 
 ---

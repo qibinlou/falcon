@@ -21,7 +21,6 @@ export interface AgentLauncher {
     gatewaySlug: string,
     apiKey: string,
     model: string,
-    options?: { dryRun?: boolean },
   ): Promise<ResolvedConfig>;
   buildSpawnConfig(resolvedConfig: ResolvedConfig, model: string, extraArgs: string[]): SpawnConfig;
 }

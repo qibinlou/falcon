@@ -21,17 +21,13 @@ RESET='\033[0m'
 SUITES=(
   "e2e/01-cli-contract.test.ts"
   "e2e/02-gateway-detect.test.ts"
-  "e2e/03-dry-run.test.ts"
   "e2e/04-models.test.ts"
-  "e2e/05-codex-config.test.ts"
 )
 
 SUITE_LABELS=(
   "01 · CLI Contract"
   "02 · Gateway Detection"
-  "03 · Dry Run (all agent/gateway combos)"
   "04 · Models API (live)"
-  "05 · Codex Config Side-Effects"
 )
 
 # ── Load .env if present ──────────────────────────────────────────────────────

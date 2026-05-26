@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { ALL_AGENTS, findAgent } from './agents/index.js';
-import { detectGatewayInstances, withGatewayEnv, withGatewayEnvAsync } from './gateways/index.js';
+import { detectGatewayInstances, withGatewayEnvAsync } from './gateways/index.js';
 import { renderApp } from './ui/App.js';
 import { formatCtx, maskString } from './utils.js';
 
@@ -20,7 +20,6 @@ async function handleLaunch(
   options: {
     model?: string;
     gateway?: string;
-    dryRun?: boolean;
   },
 ) {
   const extraArgs = agentArgs || [];
@@ -48,49 +47,6 @@ async function handleLaunch(
     process.exit(1);
   }
 
-  // Dry run mode
-  if (options.dryRun) {
-    const detected = detectGatewayInstances();
-    const targetGateway = options.gateway;
-    const gw = targetGateway
-      ? detected.find(
-          (d) =>
-            d.gateway.slug === targetGateway ||
-            d.name.toLowerCase() === targetGateway.toLowerCase(),
-        )
-      : detected[0];
-
-    if (!gw) {
-      console.error(chalk.red('No API gateway available for dry run.'));
-      process.exit(1);
-    }
-
-    const model = options.model || 'interactive-selection';
-    const config = gw.gateway.getEnvConfig(gw.apiKey, model);
-
-    const resolved = await withGatewayEnvAsync({ fields: gw.fields }, async () => {
-      return await agent.resolveConfig(config, gw.gateway.slug, gw.apiKey, model, {
-        dryRun: true,
-      });
-    });
-    const spawnConfig = withGatewayEnv({ fields: gw.fields }, () => {
-      return agent.buildSpawnConfig(resolved, model, extraArgs);
-    });
-
-    console.log(chalk.bold('\nDry Run Configuration:\n'));
-    console.log(`  Agent:   ${chalk.green(agent.name)}`);
-    console.log(`  Gateway: ${chalk.cyan(gw.name)}`);
-    console.log(`  Model:   ${chalk.yellow(model)}`);
-    console.log(`  Command: ${chalk.dim(`${spawnConfig.command} ${spawnConfig.args.join(' ')}`)}`);
-    console.log(chalk.bold('\n  Environment:'));
-    for (const [key, value] of Object.entries(spawnConfig.env)) {
-      const masked = maskString(value);
-      console.log(`    ${chalk.dim(key)}=${chalk.dim(masked)}`);
-    }
-    console.log();
-    return;
-  }
-
   // Launch the interactive TUI
   renderApp({
     agent,
@@ -110,7 +66,6 @@ program
     '-g, --gateway <gateway>',
     'API gateway to use (openrouter, openai, anthropic, cloudflare)',
   )
-  .option('--dry-run', 'Show what would be launched without actually launching')
   .option('--list-gateways', 'List detected API gateways and exit')
   .allowUnknownOption(true)
   .description('Launch a coding agent with a specific model via an API gateway')
@@ -121,7 +76,6 @@ program
       options: {
         model?: string;
         gateway?: string;
-        dryRun?: boolean;
         listGateways?: boolean;
       },
     ) => {
@@ -163,7 +117,6 @@ for (const agent of ALL_AGENTS) {
       '-g, --gateway <gateway>',
       'API gateway to use (openrouter, openai, anthropic, cloudflare)',
     )
-    .option('--dry-run', 'Show what would be launched without actually launching')
     .allowUnknownOption(true)
     .description(`Launch ${agent.name} with a specific model via an API gateway`)
     .action(
@@ -172,7 +125,6 @@ for (const agent of ALL_AGENTS) {
         options: {
           model?: string;
           gateway?: string;
-          dryRun?: boolean;
         },
       ) => {
         await handleLaunch(agent.slug, agentArgs, options);

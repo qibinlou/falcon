@@ -13,7 +13,6 @@ Welcome, Agent! This document provides comprehensive context on the Falcon codeb
 - **Interactive model picker** — Search/filter from hundreds of models in a rich TUI.
 - **Gateway browser** — When multiple keys are set, choose which gateway to use.
 - **Launch confirmation** — See model details (pricing, context window) before launching.
-- **Dry run mode** — Preview the exact command and env vars that will be used.
 - **Pass-through args** — Extra CLI flags are forwarded to the underlying agent.
 
 ---
@@ -68,7 +67,6 @@ falcon --help                      # Show help
 | :--- | :--- |
 | `-m, --model <model>` | Model to use (skips interactive picker) |
 | `-g, --gateway <gateway>` | API gateway to use (`openrouter`, `openai`, `anthropic`, `cloudflare`) |
-| `--dry-run` | Show what would be launched without actually launching |
 | `--list-gateways` | List detected API gateways and exit |
 
 ---
@@ -95,7 +93,7 @@ Falcon detects and initializes gateways based on the presence of specific enviro
 
 Here is how the codebase is structured:
 
-*   **[src/cli.ts](./src/cli.ts)**: The primary entry point. Parses CLI commands and options using Commander, runs dry runs, or initiates the interactive TUI.
+*   **[src/cli.ts](./src/cli.ts)**: The primary entry point. Parses CLI commands and options using Commander, or initiates the interactive TUI.
 *   **[src/constants.ts](./src/constants.ts)**: Contains project-wide constants, default configuration values, gateway URLs, and environment variable keys.
 *   **[src/agents/](./src/agents/)**: Directory containing agent interfaces and wrappers.
     *   **[src/agents/index.ts](./src/agents/index.ts)**: Declares the [Agent](./src/agents/index.ts#L3) interface and the `ALL_AGENTS` registry list.
@@ -125,7 +123,6 @@ npm install
 
 # Dev Mode
 npm run dev -- launch <agent> [options] [agentArgs...]
-# Example: npm run dev -- launch codex -m deepseek/deepseek-v4-flash:free --dry-run
 
 # Production Build
 npm run build
@@ -162,10 +159,6 @@ node dist/cli.js launch <agent> [options]
 
 ## 🔍 Debugging & Tips for Future Agents
 
-*   **Always Dry Run First**: When diagnosing startup crashes or parameter errors, use `--dry-run`. It avoids starting the interactive TUI and lists the generated command string and injected environment variables clearly:
-    ```bash
-    npm run dev -- launch codex -m gpt-4o --dry-run
-    ```
 *   **Bypassing TUI in Headless Environments**: Always pass `-m <model>` and `-g <gateway>` parameters if you are launching the agent inside an automated pipeline or remote shell where TUI keyboard interaction is impossible.
 *   **Codex Config Reset**: If Codex has login status or parsing failures, check the file structure of `$CODEX_HOME/.codex/config.toml` and verify if the `[profiles.falcon]` profile section matches the gateway URL.
 *   **API Model 404 Errors**: Be aware that certain providers may fail if the active model lacks specific features (like tool use support) under the selected gateway. Ensure you pick compatible models.

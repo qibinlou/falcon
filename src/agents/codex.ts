@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { GatewayConfig } from '../gateways/index.js';
 import type { AgentLauncher, ResolvedConfig, SpawnConfig } from './index.js';
-import { startBifrost } from './shared/bifrost.js';
+import { bifrost } from './shared/bifrost.js';
 import {
   DEFAULT_OPENAI_BASE_URL,
   ENV_FALCON_DIR,
@@ -19,24 +19,17 @@ export class CodexLauncher implements AgentLauncher {
     gatewaySlug: string,
     apiKey: string,
     model: string,
-    options?: { dryRun?: boolean },
   ): Promise<ResolvedConfig> {
     const env = { ...gatewayConfig.env };
     let baseUrl = gatewayConfig.baseUrl;
     let cleanup: (() => void) | undefined;
 
     if (gatewaySlug === 'anthropic') {
-      if (options?.dryRun) {
-        baseUrl = 'http://localhost:<BIFROST_PORT>/openai';
-        env['OPENAI_BASE_URL'] = baseUrl;
-        env['OPENAI_API_KEY'] = apiKey;
-      } else {
-        const bifrost = await startBifrost('anthropic', apiKey);
-        baseUrl = `http://localhost:${bifrost.port}/openai`;
-        env['OPENAI_BASE_URL'] = baseUrl;
-        env['OPENAI_API_KEY'] = apiKey;
-        cleanup = bifrost.cleanup;
-      }
+      const bifrostInstance = await bifrost.startBifrost('anthropic', apiKey);
+      baseUrl = `http://localhost:${bifrostInstance.port}/openai`;
+      env['OPENAI_BASE_URL'] = baseUrl;
+      env['OPENAI_API_KEY'] = apiKey;
+      cleanup = bifrostInstance.cleanup;
     }
 
     const codexDir = this.getCodexDir();
