@@ -22,9 +22,6 @@ Falcon is an elegant command-line interface (CLI) and interactive Terminal User 
 *   **Opt-Out Telemetry by Default**: Respects your privacy. Falcon automatically configures downstream agents to run in full privacy mode, disabling analytics, feedback prompts, telemetry, and non-essential external connections.
 *   **Pass-Through Command Forwarding**: Respects native options. Any extra flag or argument passed to Falcon is forwarded directly to the underlying agent binary.
 
-> [!IMPORTANT]
-> **Privacy by default**: Falcon automatically sets `DISABLE_TELEMETRY=1`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, and overrides Codex metrics inside `config.toml` to protect your source code and configurations.
-
 ---
 
 ## 🚀 Quick Start
