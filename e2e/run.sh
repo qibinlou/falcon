@@ -22,12 +22,14 @@ SUITES=(
   "e2e/01-cli-contract.test.ts"
   "e2e/02-gateway-detect.test.ts"
   "e2e/04-models.test.ts"
+  "e2e/05-interactive-install.test.ts"
 )
 
 SUITE_LABELS=(
   "01 · CLI Contract"
   "02 · Gateway Detection"
   "04 · Models API (live)"
+  "05 · Interactive Install"
 )
 
 # ── Load .env if present ──────────────────────────────────────────────────────

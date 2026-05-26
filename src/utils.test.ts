@@ -1,6 +1,8 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import net from 'net';
+import fs from 'fs';
+import path from 'path';
 import {
   formatCtx,
   formatPricePerM,
@@ -8,7 +10,10 @@ import {
   maskString,
   sortModels,
   waitForPort,
+  copyToClipboard,
+  checkAgentInstalled,
 } from './utils.js';
+import { setCustomBinPath } from './config.js';
 
 describe('Core Utilities', () => {
   test('formatCtx should format context lengths correctly', () => {
@@ -57,6 +62,28 @@ describe('Core Utilities', () => {
     await new Promise<void>((resolve) => {
       server.close(() => resolve());
     });
+  });
+
+  test('copyToClipboard should execute without crashing', () => {
+    const result = copyToClipboard('test clipboard content');
+    assert.strictEqual(typeof result, 'boolean');
+  });
+
+  test('checkAgentInstalled should check system path and custom path', () => {
+    // 1. Unknown command should be false
+    assert.strictEqual(checkAgentInstalled('unknown-slug', 'unknown-binary-xyz'), false);
+
+    // 2. Custom path that is valid file and executable should be true
+    const tmpFile = path.resolve('./temp-mock-bin');
+    fs.writeFileSync(tmpFile, '#!/bin/sh\necho 1', { mode: 0o755 });
+    try {
+      setCustomBinPath('mock-agent-slug', tmpFile);
+      assert.strictEqual(checkAgentInstalled('mock-agent-slug', 'temp-mock-bin'), true);
+    } finally {
+      if (fs.existsSync(tmpFile)) {
+        fs.unlinkSync(tmpFile);
+      }
+    }
   });
 });
 

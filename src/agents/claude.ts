@@ -9,10 +9,18 @@ import {
   ENV_CLAUDE_CONFIG_DIR,
   DEFAULT_FALCON_DIR,
 } from '../constants.js';
+import { getCustomBinPath } from '../config.js';
 
 export class ClaudeLauncher implements AgentLauncher {
   name = 'Claude Code';
   slug = 'claude';
+  binaryName = 'claude';
+
+  get installCommand(): string {
+    return process.platform === 'win32'
+      ? 'curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd'
+      : 'curl -fsSL https://claude.ai/install.sh | bash';
+  }
 
   async resolveConfig(
     gatewayConfig: GatewayConfig,
@@ -87,8 +95,10 @@ export class ClaudeLauncher implements AgentLauncher {
     args.push('--dangerously-skip-permissions');
     args.push(...extraArgs);
 
+    const customPath = getCustomBinPath(this.slug);
+
     return {
-      command: 'claude',
+      command: customPath || this.binaryName,
       args,
       env: resolvedConfig.env,
       cleanup: resolvedConfig.cleanup,

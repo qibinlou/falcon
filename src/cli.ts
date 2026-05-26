@@ -5,6 +5,23 @@ import { detectGatewayInstances, withGatewayEnvAsync } from './gateways/index.js
 import { renderApp } from './ui/App.js';
 import { formatCtx, maskString } from './utils.js';
 
+if (process.env.FALCON_E2E_TEST === 'true') {
+  Object.defineProperty(process.stdin, 'isTTY', {
+    value: true,
+    configurable: true,
+    writable: true,
+  });
+  if (!process.stdin.setRawMode) {
+    Object.defineProperty(process.stdin, 'setRawMode', {
+      value: function (this: unknown) {
+        return this;
+      },
+      configurable: true,
+      writable: true,
+    });
+  }
+}
+
 const VERSION = '0.1.0';
 
 const program = new Command()

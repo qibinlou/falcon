@@ -16,6 +16,8 @@ export interface SpawnConfig {
 export interface AgentLauncher {
   name: string;
   slug: string;
+  binaryName: string;
+  installCommand: string;
   resolveConfig(
     gatewayConfig: GatewayConfig,
     gatewaySlug: string,

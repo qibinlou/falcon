@@ -9,10 +9,13 @@ import {
   ENV_CODEX_HOME,
   DEFAULT_FALCON_DIR,
 } from '../constants.js';
+import { getCustomBinPath } from '../config.js';
 
 export class CodexLauncher implements AgentLauncher {
   name = 'Codex';
   slug = 'codex';
+  binaryName = 'codex';
+  installCommand = 'npm install -g @openai/codex';
 
   async resolveConfig(
     gatewayConfig: GatewayConfig,
@@ -67,8 +70,10 @@ export class CodexLauncher implements AgentLauncher {
     }
     args.push(...extraArgs);
 
+    const customPath = getCustomBinPath(this.slug);
+
     return {
-      command: 'codex',
+      command: customPath || this.binaryName,
       args,
       env: resolvedConfig.env,
       cleanup: resolvedConfig.cleanup,

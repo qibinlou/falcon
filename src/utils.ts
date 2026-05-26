@@ -1,4 +1,8 @@
+import fs from 'fs';
 import net from 'net';
+import path from 'path';
+import { spawnSync } from 'child_process';
+import { getCustomBinPath } from './config.js';
 
 /**
  * Gets a free TCP port by binding to 127.0.0.1.
@@ -108,4 +112,60 @@ export function sortModels(a: SortableModel, b: SortableModel): number {
   if (ctxDiff !== 0) return ctxDiff;
 
   return 0;
+}
+
+export function copyToClipboard(text: string): boolean {
+  try {
+    const platform = process.platform;
+    if (platform === 'darwin') {
+      const proc = spawnSync('pbcopy', [], { input: text, encoding: 'utf8' });
+      return proc.status === 0;
+    } else if (platform === 'win32') {
+      const proc = spawnSync('clip', [], { input: text, encoding: 'utf8' });
+      return proc.status === 0;
+    } else {
+      // Linux/Unix
+      let proc = spawnSync('xclip', ['-selection', 'clipboard'], { input: text, encoding: 'utf8' });
+      if (proc.status === 0) return true;
+
+      proc = spawnSync('xsel', ['--clipboard', '--input'], { input: text, encoding: 'utf8' });
+      if (proc.status === 0) return true;
+
+      proc = spawnSync('wl-copy', [], { input: text, encoding: 'utf8' });
+      if (proc.status === 0) return true;
+    }
+  } catch {
+    // Ignore and return false
+  }
+  return false;
+}
+
+export function checkAgentInstalled(slug: string, binaryName: string): boolean {
+  const customPath = getCustomBinPath(slug);
+  if (customPath) {
+    try {
+      const stats = fs.statSync(customPath);
+      if (stats.isFile()) {
+        fs.accessSync(customPath, fs.constants.X_OK);
+        return true;
+      }
+    } catch {}
+  }
+
+  // Fallback to searching system PATH
+  const pathEnv = process.env.PATH || '';
+  const pathDirs = pathEnv.split(path.delimiter);
+  for (const dir of pathDirs) {
+    if (!dir) continue;
+    const fullPath = path.join(dir, binaryName);
+    try {
+      const stats = fs.statSync(fullPath);
+      if (stats.isFile()) {
+        fs.accessSync(fullPath, fs.constants.X_OK);
+        return true;
+      }
+    } catch {}
+  }
+
+  return false;
 }

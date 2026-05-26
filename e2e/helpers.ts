@@ -57,6 +57,8 @@ export interface SpawnOptions {
   cwd?: string;
   /** Timeout in ms. Defaults to 15000 (15 s). */
   timeout?: number;
+  /** Input to send to stdin. */
+  input?: string | Buffer;
 }
 
 /**
@@ -74,6 +76,7 @@ export function spawnCli(args: string[], opts: SpawnOptions = {}): SpawnResult {
   const envExtra = {
     FALCON_DIR: opts.env?.FALCON_DIR || testConfigDir,
     FALCON_CONFIG_FILE: opts.env?.FALCON_CONFIG_FILE || path.join(testConfigDir, 'config.json'),
+    FALCON_E2E_TEST: 'true',
   };
 
   if (opts.env) {
@@ -95,11 +98,14 @@ export function spawnCli(args: string[], opts: SpawnOptions = {}): SpawnResult {
     };
   }
 
+  const inputBuffer = typeof opts.input === 'string' ? Buffer.from(opts.input, 'utf8') : opts.input;
+
   const result: SpawnSyncReturns<Buffer> = spawnSync('npx', ['tsx', CLI_ENTRY, ...args], {
     cwd: opts.cwd ?? ROOT,
     env: env as NodeJS.ProcessEnv,
     timeout: opts.timeout ?? 15_000,
     encoding: 'buffer',
+    input: inputBuffer,
   });
 
   const stdout = (result.stdout ?? Buffer.alloc(0)).toString('utf8');

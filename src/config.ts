@@ -61,6 +61,21 @@ export interface ConfiguredGateway {
 export interface FalconConfigV2 {
   version: 2;
   gateways: ConfiguredGateway[];
+  binPaths?: Record<string, string>;
+}
+
+export function getCustomBinPath(agentSlug: string): string | undefined {
+  const config = loadFalconConfigV2();
+  return config.binPaths?.[agentSlug];
+}
+
+export function setCustomBinPath(agentSlug: string, binPath: string) {
+  const config = loadFalconConfigV2();
+  if (!config.binPaths) {
+    config.binPaths = {};
+  }
+  config.binPaths[agentSlug] = binPath;
+  saveFalconConfigV2(config);
 }
 
 export function loadFalconConfigV2(): FalconConfigV2 {

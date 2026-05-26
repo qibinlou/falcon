@@ -17,9 +17,12 @@ import { ModelPicker } from './ModelPicker.js';
 import { ConfigureGatewayPicker } from './ConfigureGatewayPicker.js';
 import { ConfigureGatewayInput } from './ConfigureGatewayInput.js';
 import { loadFalconConfigV2, saveFalconConfigV2 } from '../config.js';
+import { checkAgentInstalled } from '../utils.js';
+import { InstallAgentPrompt } from './InstallAgentPrompt.js';
 
 type AppState =
   | { phase: 'detect' }
+  | { phase: 'install-prompt' }
   | { phase: 'gateway-manager'; instances: GatewayInstance[] }
   | { phase: 'configure-gateway-list'; title?: string }
   | { phase: 'configure-gateway-input'; gateway: Gateway; editingInstance?: GatewayInstance }
@@ -130,6 +133,11 @@ function App({ agent, preselectedModel, preselectedGateway, extraArgs }: AppProp
   useEffect(() => {
     if (state.phase !== 'detect') return;
 
+    if (!checkAgentInstalled(agent.slug, agent.binaryName)) {
+      setState({ phase: 'install-prompt' });
+      return;
+    }
+
     const instances = detectGatewayInstances();
 
     if (instances.length === 0) {
@@ -169,7 +177,7 @@ function App({ agent, preselectedModel, preselectedGateway, extraArgs }: AppProp
     }
 
     setState({ phase: 'loading-models', instances });
-  }, [launchAgent, normalizedPreselectedGateway, preselectedModel, state.phase]);
+  }, [launchAgent, normalizedPreselectedGateway, preselectedModel, state.phase, agent]);
 
   useEffect(() => {
     if (state.phase !== 'loading-models') return;
@@ -218,6 +226,16 @@ function App({ agent, preselectedModel, preselectedGateway, extraArgs }: AppProp
             <Text color="cyan">⠋</Text> Detecting API keys...
           </Text>
         </Box>
+      )}
+
+      {state.phase === 'install-prompt' && (
+        <InstallAgentPrompt
+          agent={agent}
+          onConfigured={() => {
+            setState({ phase: 'detect' });
+          }}
+          onCancel={() => exit()}
+        />
       )}
 
       {state.phase === 'gateway-manager' && (
