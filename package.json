@@ -1,7 +1,7 @@
 {
   "name": "falconsh",
-  "version": "1.0.0",
-  "description": "Run any coding agent with any LLM in absolute privacy.",
+  "version": "1.1.0",
+  "description": "Run any coding agent with any LLM in absolute privacy. Currently support Claude Code, Codex and OpenCode.",
   "type": "module",
   "files": [
     "dist",
@@ -33,12 +33,12 @@
     "check:lint": "biome lint --fix src e2e",
     "check:all": "npm run check:types && npm run check:format && npm run check:lint",
     "launch:claude-auth-status": "npm run dev -- launch claude -m auto auth status",
-    "launch:claude-it": "npm run dev -- launch claude --verbose -m deepseek/deepseek-v4-flash:free",
-    "launch:claude-with-prompt": "npm run dev -- launch claude --verbose -m deepseek/deepseek-v4-flash:free -p 'Who is your model maker?' ",
+    "launch:claude-it": "npm run dev -- launch claude --verbose -m openrouter/free",
+    "launch:claude-with-prompt": "npm run dev -- launch claude --verbose -m openrouter/free -p 'Who is your model maker?' ",
     "launch:claude-with-anthropic-gateway": "npm run dev -- launch claude --verbose -m claude-haiku-4-5 -p 'Who is your model maker?' ",
     "launch:codex-auth-status": "export CODEX_HOME=~/.falcon/codex && npm run dev -- launch codex -m auto login status",
-    "launch:codex-it": "export CODEX_HOME=~/.falcon/codex && npm run dev -- launch codex -m deepseek/deepseek-v4-flash:free",
-    "launch:opencode-with-prompt": "npm run dev -- launch opencode -m deepseek/deepseek-chat -p 'Who is your model maker?'",
+    "launch:codex-it": "export CODEX_HOME=~/.falcon/codex && npm run dev -- launch codex -m openrouter/free",
+    "launch:opencode-with-prompt": "npm run dev -- launch opencode -m deepseek/deepseek-v4-flash:free -p 'Who is your model maker?'",
     "launch:claude-installer": "PATH=/bin FALCON_DIR=/tmp/falcon-clean-test-dir npm run dev -- launch claude"
   },
   "dependencies": {

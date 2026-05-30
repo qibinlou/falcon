@@ -88,7 +88,9 @@ export class OpencodeLauncher implements AgentLauncher {
           [providerSlug]: providerConfig,
         },
         // Set the default model so opencode uses it when --model is passed
-        model: targetModel.startsWith(`${providerSlug}/`) ? targetModel : `${providerSlug}/${targetModel}`,
+        model: targetModel.startsWith(`${providerSlug}/`)
+          ? targetModel
+          : `${providerSlug}/${targetModel}`,
       };
 
       try {
@@ -140,7 +142,9 @@ export class OpencodeLauncher implements AgentLauncher {
       const providerSlug = gatewaySlug ? getOpencodeProviderSlug(gatewaySlug) : 'openrouter';
 
       // OpenCode model format is "{providerSlug}/{modelId}"
-      const fullModelId = targetModel.startsWith(`${providerSlug}/`) ? targetModel : `${providerSlug}/${targetModel}`;
+      const fullModelId = targetModel.startsWith(`${providerSlug}/`)
+        ? targetModel
+        : `${providerSlug}/${targetModel}`;
       args.push('--model', fullModelId);
     }
 

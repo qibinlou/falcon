@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { ALL_AGENTS, findAgent } from './agents/index.js';
@@ -22,14 +25,96 @@ if (process.env.FALCON_E2E_TEST === 'true') {
   }
 }
 
-const VERSION = '0.1.0';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8'));
+const VERSION = packageJson.version;
 
 const program = new Command()
   .name('falcon')
   .version(VERSION)
   .description(
-    chalk.magenta('🦅 Falcon') + ' — Launch coding agents with multi-gateway API support',
+    chalk.magenta('🦅 Falcon') + ' — Launch any coding agent with any LLM in absolute privacy.',
   );
+
+program.configureHelp({
+  formatHelp(cmd, helper) {
+    const termWidth = helper.padWidth(cmd, helper);
+    const helpWidth = helper.helpWidth ?? 80;
+
+    const callFormatItem = (term: string, description: string) => {
+      return helper.formatItem(term, termWidth, description, helper);
+    };
+
+    // Usage
+    let output = [
+      `${helper.styleTitle('Usage:')} ${helper.styleUsage(helper.commandUsage(cmd))}`,
+      '',
+    ];
+
+    // Description
+    const commandDescription = helper.commandDescription(cmd);
+    if (commandDescription.length > 0) {
+      output = output.concat([
+        helper.boxWrap(helper.styleCommandDescription(commandDescription), helpWidth),
+        '',
+      ]);
+    }
+
+    // Arguments
+    const argumentList = helper.visibleArguments(cmd).map((argument) => {
+      return callFormatItem(
+        helper.styleArgumentTerm(helper.argumentTerm(argument)),
+        helper.styleArgumentDescription(helper.argumentDescription(argument)),
+      );
+    });
+    output = output.concat(helper.formatItemList('Arguments:', argumentList, helper));
+
+    // Commands (moved before Options)
+    const commandGroups = helper.groupItems(
+      [...cmd.commands],
+      helper.visibleCommands(cmd),
+      (sub) => sub.helpGroup() || 'Commands:',
+    );
+    commandGroups.forEach((commands, group) => {
+      const commandList = commands.map((sub) => {
+        return callFormatItem(
+          helper.styleSubcommandTerm(helper.subcommandTerm(sub)),
+          helper.styleSubcommandDescription(helper.subcommandDescription(sub)),
+        );
+      });
+      output = output.concat(helper.formatItemList(group, commandList, helper));
+    });
+
+    // Options
+    const optionGroups = helper.groupItems(
+      [...cmd.options],
+      helper.visibleOptions(cmd),
+      (option) => option.helpGroupHeading ?? 'Options:',
+    );
+    optionGroups.forEach((options, group) => {
+      const optionList = options.map((option) => {
+        return callFormatItem(
+          helper.styleOptionTerm(helper.optionTerm(option)),
+          helper.styleOptionDescription(helper.optionDescription(option)),
+        );
+      });
+      output = output.concat(helper.formatItemList(group, optionList, helper));
+    });
+
+    if (helper.showGlobalOptions) {
+      const globalOptionList = helper.visibleGlobalOptions(cmd).map((option) => {
+        return callFormatItem(
+          helper.styleOptionTerm(helper.optionTerm(option)),
+          helper.styleOptionDescription(helper.optionDescription(option)),
+        );
+      });
+      output = output.concat(helper.formatItemList('Global Options:', globalOptionList, helper));
+    }
+
+    return output.join('\n');
+  },
+});
 
 async function handleLaunch(
   agentName: string | undefined,
