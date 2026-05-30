@@ -6,7 +6,7 @@ Welcome, Agent! This document provides comprehensive context on the Falcon codeb
 
 ## 📖 System Overview & Features
 
-**Falcon** is a CLI and Terminal User Interface (TUI) tool written in TypeScript. It wraps coding agents—specifically [Codex](https://github.com/openai/codex) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to launch coding agents with a single command.
+**Falcon** is a CLI and Terminal User Interface (TUI) tool written in TypeScript. It wraps coding agents—specifically [Codex](https://github.com/openai/codex), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to launch coding agents with a single command.
 
 ### Key Features
 - **Multi-gateway support** — Auto-detects API keys from OpenRouter, OpenAI, Anthropic, and Cloudflare.
@@ -40,6 +40,7 @@ export OPENAI_API_KEY=sk-...
 # Launch with interactive model picker
 falcon launch codex
 falcon launch claude
+falcon launch opencode
 
 # Launch with a specific model
 falcon launch claude --model claude-sonnet-4-20250514
@@ -86,6 +87,7 @@ Falcon detects and initializes gateways based on the presence of specific enviro
 
 *   **Codex**: Resolves target directory via `process.env.CODEX_HOME` (defaulting to `~/.codex/`). Modifies `config.toml` profile sections `[profiles.falcon]` and `[model_providers.<hostname>]`, and updates the list in `model.json`.
 *   **Claude Code**: Directly relies on environment variables (`ANTHROPIC_API_KEY` or custom compatible endpoints like `ANTHROPIC_BASE_URL` mapped by the active gateway).
+*   **OpenCode**: Resolves config directory via `process.env.OPENCODE_CONFIG_DIR` (defaulting to `~/.falcon/opencode/` or using `FALCON_DIR`) and updates the `opencode.json` configuration settings.
 
 ---
 
@@ -99,6 +101,7 @@ Here is how the codebase is structured:
     *   **[src/agents/index.ts](./src/agents/index.ts)**: Declares the [Agent](./src/agents/index.ts#L3) interface and the `ALL_AGENTS` registry list.
     *   **[src/agents/codex.ts](./src/agents/codex.ts)**: Wrapper for Codex. Dynamically generates or updates Codex's configuration files (profiles and providers in `~/.codex/config.toml`) and the local model catalog (`~/.codex/model.json`).
     *   **[src/agents/claude.ts](./src/agents/claude.ts)**: Wrapper for Claude Code. Passes `--dangerously-skip-permissions` to bypass prompts in sandbox environments.
+    *   **[src/agents/opencode.ts](./src/agents/opencode.ts)**: Wrapper for OpenCode. Dynamically generates or updates the local `opencode.json` config settings.
 *   **[src/gateways/](./src/gateways/)**: Directory containing API gateways/proxies.
     *   **[src/gateways/index.ts](./src/gateways/index.ts)**: Declares the [Gateway](./src/gateways/index.ts#L19) interface, [ModelInfo](./src/gateways/index.ts#L3), and the `ALL_GATEWAYS` registry list.
     *   **[src/gateways/openrouter.ts](./src/gateways/openrouter.ts)**: Live fetches models from OpenRouter's HTTP endpoint. Sets up OpenAI and Anthropic compatible environment variables for Codex/Claude routing.
