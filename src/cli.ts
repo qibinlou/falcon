@@ -76,7 +76,7 @@ async function handleLaunch(
 // Main launch command
 program
   .command('launch')
-  .argument('[agent]', 'Agent to launch (codex, claude)')
+  .argument('[agent]', 'Agent to launch (codex, claude, opencode)')
   .argument('[agentArgs...]', 'Arguments to pass to the agent')
   .option('-m, --model <model>', 'Model to use')
   .option(

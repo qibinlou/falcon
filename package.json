@@ -38,6 +38,7 @@
     "launch:claude-with-anthropic-gateway": "npm run dev -- launch claude --verbose -m claude-haiku-4-5 -p 'Who is your model maker?' ",
     "launch:codex-auth-status": "export CODEX_HOME=~/.falcon/codex && npm run dev -- launch codex -m auto login status",
     "launch:codex-it": "export CODEX_HOME=~/.falcon/codex && npm run dev -- launch codex -m deepseek/deepseek-v4-flash:free",
+    "launch:opencode-with-prompt": "npm run dev -- launch opencode -m deepseek/deepseek-chat -p 'Who is your model maker?'",
     "launch:claude-installer": "PATH=/bin FALCON_DIR=/tmp/falcon-clean-test-dir npm run dev -- launch claude"
   },
   "dependencies": {

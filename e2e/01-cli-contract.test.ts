@@ -7,7 +7,7 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { assertContains, assertExitCode, spawnCli } from './helpers.ts';
+import { assertContains, assertNotContains, assertExitCode, spawnCli } from './helpers.js';
 
 describe('CLI Contract', () => {
   it('--help exits 0 and lists core commands', () => {
@@ -31,6 +31,8 @@ describe('CLI Contract', () => {
     // Should list known agents
     assertContains(r.stdout + r.stderr, 'codex', 'launch (no agent)');
     assertContains(r.stdout + r.stderr, 'claude', 'launch (no agent)');
+    assertContains(r.stdout + r.stderr, 'opencode', 'launch (no agent)');
+    assertNotContains(r.stdout + r.stderr, 'agy', 'launch (no agent)');
   });
 
   it('launch with unknown agent exits 1 and reports error', () => {

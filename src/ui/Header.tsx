@@ -41,4 +41,3 @@ export function Header({ agent }: HeaderProps) {
     </Box>
   );
 }
-

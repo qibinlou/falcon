@@ -16,6 +16,7 @@ export const PROVIDER_HOST_MAPPINGS: Record<string, string> = {
 export const ENV_FALCON_DIR = 'FALCON_DIR';
 export const ENV_CLAUDE_CONFIG_DIR = 'CLAUDE_CONFIG_DIR';
 export const ENV_CODEX_HOME = 'CODEX_HOME';
+export const ENV_OPENCODE_CONFIG_DIR = 'OPENCODE_CONFIG_DIR';
 export const ENV_FALCON_CONFIG_FILE = 'FALCON_CONFIG_FILE';
 
 // Workspace Default Paths

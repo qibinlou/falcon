@@ -29,11 +29,17 @@ export interface AgentLauncher {
 
 export { ClaudeLauncher as ClaudeAgent } from './claude.js';
 export { CodexLauncher as CodexAgent } from './codex.js';
+export { OpencodeLauncher as OpencodeAgent } from './opencode.js';
 
 import { ClaudeLauncher } from './claude.js';
 import { CodexLauncher } from './codex.js';
+import { OpencodeLauncher } from './opencode.js';
 
-export const ALL_AGENTS: AgentLauncher[] = [new CodexLauncher(), new ClaudeLauncher()];
+export const ALL_AGENTS: AgentLauncher[] = [
+  new CodexLauncher(),
+  new ClaudeLauncher(),
+  new OpencodeLauncher(),
+];
 
 export function findAgent(name: string): AgentLauncher | undefined {
   return ALL_AGENTS.find(
