@@ -1,7 +1,7 @@
 # 🦅 Falcon — Launch any coding agent with any LLM in absolute privacy.
 
 
-[![npm version](https://img.shields.io/badge/npm-1.0.0-blue.svg?style=flat-square&color=0a0a0c)](https://www.npmjs.com/package/falconsh)
+[![npm version](https://img.shields.io/badge/npm-1.1.0-blue.svg?style=flat-square&color=0a0a0c)](https://www.npmjs.com/package/falconsh)
 [![Agent: Codex](https://img.shields.io/badge/Agent-Codex-orange.svg?style=flat-square&color=00a67e)](https://github.com/openai/codex)
 [![Agent: Claude Code](https://img.shields.io/badge/Agent-Claude%20Code-orange.svg?style=flat-square&color=cc9900)](https://docs.anthropic.com/en/docs/claude-code)
 [![Agent: OpenCode](https://img.shields.io/badge/Agent-OpenCode-blue.svg?style=flat-square&color=3399ff)](https://opencode.ai)
@@ -74,30 +74,27 @@ export OPENAI_API_KEY="sk-proj-..."
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
-*(Alternatively, run in interactive mode to add and encrypt your gateways via the TUI!)*
+*(Alternatively, run in interactive mode to add and encrypt your gateway API keys via the TUI!)*
 
 ### 3. Run Falcon
 
 You can run Falcon using `npx falconsh`, globally via `falcon`, or from source (using `npm run dev --` in place of `falcon`):
 
 ```bash
-# Start in interactive mode to pick agent and gateway
+# Start in interactive mode to pick agent and LLM provider
 falcon launch
 
 # Shorthand to run Claude Code with interactive model picker
-falcon launch claude
-
-# Shorthand to run Codex
-falcon launch codex
+falcon claude
 
 # Shorthand to run OpenCode
-falcon launch opencode
+falcon opencode
 
-# Launch with a specific model directly (skips TUI)
-falcon launch claude --model claude-3-5-sonnet-latest
+# Launch codex with a specific model directly (skips TUI)
+falcon codex -m claude-opus-4-8
 
-# Launch with a specific model using a specific gateway
-falcon launch codex --gateway openrouter --model deepseek/deepseek-v4-flash:free
+# Launch claude with a specific model directly (skips TUI)
+falcon claude --model chat-latest
 ```
 
 ---
