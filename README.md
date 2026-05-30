@@ -76,7 +76,7 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 *(Alternatively, run in interactive mode to add and encrypt your gateway API keys via the TUI!)*
 
-### 3. Run Falcon
+### 3. Examples
 
 You can run Falcon using `npx falconsh`, globally via `falcon`, or from source (using `npm run dev --` in place of `falcon`):
 

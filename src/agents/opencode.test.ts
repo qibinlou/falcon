@@ -82,7 +82,7 @@ describe('OpenCode Agent Launcher', () => {
       delete process.env[ENV_OPENCODE_CONFIG_DIR];
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) { }
+      } catch (_) {}
     }
   });
 
@@ -122,7 +122,7 @@ describe('OpenCode Agent Launcher', () => {
       }
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) { }
+      } catch (_) {}
     }
   });
 
@@ -133,7 +133,7 @@ describe('OpenCode Agent Launcher', () => {
     delete process.env[ENV_FALCON_DIR];
     delete process.env[ENV_OPENCODE_CONFIG_DIR];
 
-    mock.method(fs, 'mkdirSync', () => { });
+    mock.method(fs, 'mkdirSync', () => {});
     mock.method(fs, 'existsSync', () => true);
 
     try {

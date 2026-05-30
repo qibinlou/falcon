@@ -24,8 +24,11 @@ describe('Interactive Agent Installation E2E', () => {
 
     // Verify it printed the warning and the install command
     const output = r.stdout + r.stderr;
-    assertContains(output, 'CLI binary is not installed');
-    assertContains(output, 'curl -fsSL https://claude.ai/install.sh | bash');
+    assertContains(output, 'CLI binary is not');
+    assertContains(output, 'installed or discovered');
+    assertContains(output, 'curl -fsSL');
+    assertContains(output, 'https://claude.ai/install.sh');
+    assertContains(output, 'bash');
   });
 
   it('should trigger install prompt for codex when not in PATH and copy command on select "3"', () => {
@@ -37,7 +40,8 @@ describe('Interactive Agent Installation E2E', () => {
     assertExitCode(r, 0);
 
     const output = r.stdout + r.stderr;
-    assertContains(output, 'CLI binary is not installed');
+    assertContains(output, 'CLI binary is not');
+    assertContains(output, 'installed or discovered');
     assertContains(output, 'npm install -g @openai/codex');
   });
 

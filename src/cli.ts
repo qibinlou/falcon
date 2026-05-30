@@ -3,8 +3,9 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { ALL_AGENTS, findAgent } from './agents/index.js';
-import { detectGatewayInstances, withGatewayEnvAsync } from './gateways/index.js';
+import { ALL_AGENTS, findAgent, type ResolvedConfig } from './agents/index.js';
+import { spawn } from 'child_process';
+import { detectGatewayInstances, withGatewayEnv, withGatewayEnvAsync } from './gateways/index.js';
 import { renderApp } from './ui/App.js';
 import { formatCtx, maskString } from './utils.js';
 
@@ -149,6 +150,91 @@ async function handleLaunch(
     process.exit(1);
   }
 
+  const shouldBypassTUI = extraArgs.length > 0 || options.model !== undefined;
+
+  if (shouldBypassTUI) {
+    const model = options.model || 'auto';
+    const detected = detectGatewayInstances();
+    const targetGateway = options.gateway
+      ? detected.find(
+          (d) =>
+            d.gateway.slug === options.gateway ||
+            d.name.toLowerCase() === options.gateway.toLowerCase(),
+        )
+      : detected[0];
+
+    let resolvedConfig: ResolvedConfig = { env: {} };
+    let gatewayEnv: Record<string, string> = {};
+
+    if (targetGateway) {
+      gatewayEnv = targetGateway.fields;
+      const config = targetGateway.gateway.getEnvConfig(targetGateway.apiKey, model);
+      try {
+        resolvedConfig = await withGatewayEnvAsync({ fields: gatewayEnv }, async () => {
+          return await agent.resolveConfig(
+            config,
+            targetGateway.gateway.slug,
+            targetGateway.apiKey,
+            model,
+          );
+        });
+      } catch (err) {
+        console.error(
+          chalk.red(`Failed to resolve config: ${err instanceof Error ? err.message : err}`),
+        );
+        process.exit(1);
+      }
+    } else {
+      // No active gateway detected. Try resolving config with empty settings.
+      // This allows help/version/info options to work even when keys/gateways are unconfigured.
+      try {
+        resolvedConfig = await agent.resolveConfig({ env: {} }, 'none', '', model);
+      } catch (_) {
+        // Safe to ignore on dry-run command args like --help
+      }
+    }
+
+    const spawnConfig = withGatewayEnv({ fields: gatewayEnv }, () => {
+      return agent.buildSpawnConfig(resolvedConfig, model, extraArgs);
+    });
+
+    const cleanUp = () => {
+      if (spawnConfig.cleanup) {
+        try {
+          spawnConfig.cleanup();
+        } catch (_) {}
+      }
+    };
+
+    const handleSignal = () => {
+      cleanUp();
+      process.exit(1);
+    };
+
+    process.on('SIGINT', handleSignal);
+    process.on('SIGTERM', handleSignal);
+    process.on('exit', cleanUp);
+
+    const proc = spawn(spawnConfig.command, spawnConfig.args, {
+      stdio: 'inherit',
+      env: { ...process.env, ...gatewayEnv, ...spawnConfig.env },
+    });
+
+    proc.on('error', (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(chalk.red(`Failed to launch ${agent.name}: ${message}`));
+      cleanUp();
+      process.exit(1);
+    });
+
+    proc.on('exit', (code: number | null) => {
+      cleanUp();
+      process.exit(code ?? 0);
+    });
+
+    return;
+  }
+
   // Launch the interactive TUI
   renderApp({
     agent,
@@ -220,6 +306,7 @@ for (const agent of ALL_AGENTS) {
       'API gateway to use (openrouter, openai, anthropic, cloudflare)',
     )
     .allowUnknownOption(true)
+    .helpOption(false)
     .description(`Launch ${agent.name} with a specific model via an API gateway`)
     .action(
       async (
@@ -290,4 +377,40 @@ program
     }
   });
 
-program.parse();
+export function preprocessArgs(argv: string[]): string[] {
+  const newArgv = [...argv];
+  const launchIndex = newArgv.indexOf('launch');
+  if (launchIndex !== -1 && launchIndex + 1 < newArgv.length) {
+    const agentName = newArgv[launchIndex + 1];
+    const agent = findAgent(agentName);
+    if (agent) {
+      const hasHelp = newArgv
+        .slice(launchIndex + 2)
+        .some((arg) => arg === '-h' || arg === '--help');
+      if (hasHelp) {
+        newArgv.splice(launchIndex, 1);
+      }
+    }
+  }
+  return newArgv;
+}
+
+const isMain =
+  process.argv[1] &&
+  (process.argv[1].endsWith('/cli.ts') ||
+    process.argv[1].endsWith('\\cli.ts') ||
+    process.argv[1].endsWith('/cli.js') ||
+    process.argv[1].endsWith('\\cli.js') ||
+    process.argv[1].endsWith('/falcon') ||
+    process.argv[1].endsWith('\\falcon') ||
+    process.argv[1].endsWith('/falconsh') ||
+    process.argv[1].endsWith('\\falconsh') ||
+    process.argv[1] === 'cli.ts' ||
+    process.argv[1] === 'cli.js');
+
+if (isMain) {
+  const processedArgv = preprocessArgs(process.argv);
+  program.parse(processedArgv);
+}
+
+export { program, handleLaunch };
