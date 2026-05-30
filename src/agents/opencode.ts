@@ -41,6 +41,10 @@ export class OpencodeLauncher implements AgentLauncher {
     const env: Record<string, string> = { ...gatewayConfig.env };
     env['FALCON_GATEWAY_SLUG'] = gatewaySlug;
 
+    // Turn off telemetry and auto-updates for OpenCode
+    env['OPENCODE_DISABLE_AUTOUPDATE'] = 'true';
+    env['OPENCODE_DISABLE_SHARE'] = 'true';
+
     const falconDir = process.env[ENV_FALCON_DIR] || DEFAULT_FALCON_DIR;
     const configDir = process.env[ENV_OPENCODE_CONFIG_DIR] || path.join(falconDir, this.slug);
     env[ENV_OPENCODE_CONFIG_DIR] = configDir;
@@ -86,6 +90,11 @@ export class OpencodeLauncher implements AgentLauncher {
         $schema: 'https://opencode.ai/config.json',
         provider: {
           [providerSlug]: providerConfig,
+        },
+        share: 'disabled',
+        autoupdate: false,
+        experimental: {
+          openTelemetry: false,
         },
         // Set the default model so opencode uses it when --model is passed
         model: targetModel.startsWith(`${providerSlug}/`)

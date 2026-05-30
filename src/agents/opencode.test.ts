@@ -66,11 +66,23 @@ describe('OpenCode Agent Launcher', () => {
 
       assert.strictEqual(resolved.env[ENV_OPENCODE_CONFIG_DIR], testConfigDir);
       assert.ok(fs.existsSync(testConfigDir), 'OpenCode config directory should be created');
+
+      // Verify privacy / telemetry environment variables
+      assert.strictEqual(resolved.env['OPENCODE_DISABLE_AUTOUPDATE'], 'true');
+      assert.strictEqual(resolved.env['OPENCODE_DISABLE_SHARE'], 'true');
+
+      // Verify opencode.json config contains privacy overrides
+      const configPath = path.join(testConfigDir, 'opencode.json');
+      assert.ok(fs.existsSync(configPath), 'opencode.json file should be created');
+      const writtenConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      assert.strictEqual(writtenConfig.share, 'disabled');
+      assert.strictEqual(writtenConfig.autoupdate, false);
+      assert.deepStrictEqual(writtenConfig.experimental, { openTelemetry: false });
     } finally {
       delete process.env[ENV_OPENCODE_CONFIG_DIR];
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -110,7 +122,7 @@ describe('OpenCode Agent Launcher', () => {
       }
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -121,7 +133,7 @@ describe('OpenCode Agent Launcher', () => {
     delete process.env[ENV_FALCON_DIR];
     delete process.env[ENV_OPENCODE_CONFIG_DIR];
 
-    mock.method(fs, 'mkdirSync', () => {});
+    mock.method(fs, 'mkdirSync', () => { });
     mock.method(fs, 'existsSync', () => true);
 
     try {
