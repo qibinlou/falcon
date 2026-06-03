@@ -155,11 +155,11 @@ async function handleLaunch(
   if (shouldBypassTUI) {
     const model = options.model || 'auto';
     const detected = detectGatewayInstances();
-    const targetGateway = options.gateway
+    const gatewayName = options.gateway;
+    const targetGateway = gatewayName
       ? detected.find(
           (d) =>
-            d.gateway.slug === options.gateway ||
-            d.name.toLowerCase() === options.gateway.toLowerCase(),
+            d.gateway.slug === gatewayName || d.name.toLowerCase() === gatewayName.toLowerCase(),
         )
       : detected[0];
 

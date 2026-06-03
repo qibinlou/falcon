@@ -69,11 +69,18 @@ describe('Codex Agent Launcher', () => {
     assert.ok(fs.existsSync(configPath), 'config.toml should exist');
     assert.ok(fs.existsSync(catalogPath), 'model.json should exist');
 
-    // Verify config.toml contents
+    // Verify falcon.config.toml and config.toml contents
+    const profilePath = path.join(tempDir, 'falcon.config.toml');
+    assert.ok(fs.existsSync(profilePath), 'falcon.config.toml should exist');
+    const profileContent = fs.readFileSync(profilePath, 'utf8');
+    assert.ok(profileContent.includes('model = "gpt-4o"'));
+    assert.ok(profileContent.includes('model_provider = "api-openai-com"'));
+
     const configContent = fs.readFileSync(configPath, 'utf8');
-    assert.ok(configContent.includes('[profiles.falcon]'));
-    assert.ok(configContent.includes('model = "gpt-4o"'));
-    assert.ok(configContent.includes('model_provider = "api-openai-com"'));
+    assert.ok(
+      !configContent.includes('[profiles.falcon]'),
+      'config.toml should not contain legacy profile section',
+    );
 
     // Verify model.json contents
     const catalogContent = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
@@ -117,12 +124,19 @@ describe('Codex Agent Launcher', () => {
       const configPath = path.join(tempDir, 'config.toml');
       assert.ok(fs.existsSync(configPath), 'config.toml should exist');
 
-      // Verify config.toml contents
+      // Verify falcon.config.toml and config.toml contents
+      const profilePath = path.join(tempDir, 'falcon.config.toml');
+      assert.ok(fs.existsSync(profilePath), 'falcon.config.toml should exist');
+      const profileContent = fs.readFileSync(profilePath, 'utf8');
+      assert.ok(profileContent.includes('model = "claude-sonnet-4-20250514"'));
+      assert.ok(profileContent.includes('model_provider = "localhost"'));
+
       const configContent = fs.readFileSync(configPath, 'utf8');
-      assert.ok(configContent.includes('[profiles.falcon]'));
-      assert.ok(configContent.includes('model = "claude-sonnet-4-20250514"'));
-      assert.ok(configContent.includes('model_provider = "localhost"'));
       assert.ok(configContent.includes('base_url = "http://localhost:9999/openai/"'));
+      assert.ok(
+        !configContent.includes('[profiles.falcon]'),
+        'config.toml should not contain legacy profile section',
+      );
     } finally {
       mock.reset();
     }
@@ -241,17 +255,24 @@ describe('Codex Agent Launcher', () => {
       assert.ok(fs.existsSync(configPath), 'config.toml should exist');
       assert.ok(fs.existsSync(catalogPath), 'model.json should exist');
 
+      const profilePath = path.join(sideEffectDir, 'falcon.config.toml');
+      assert.ok(fs.existsSync(profilePath), 'falcon.config.toml should exist');
+      const profileContent = fs.readFileSync(profilePath, 'utf8');
+      assert.ok(
+        profileContent.includes('model = "deepseek/deepseek-v4-flash:free"'),
+        'falcon.config.toml missing model',
+      );
+      assert.ok(
+        profileContent.includes('forced_login_method = "api"'),
+        'falcon.config.toml missing forced_login_method',
+      );
+
       const configContent = fs.readFileSync(configPath, 'utf8');
-      assert.ok(configContent.includes('[profiles.falcon]'), 'config.toml missing profiles.falcon');
-      assert.ok(
-        configContent.includes('model = "deepseek/deepseek-v4-flash:free"'),
-        'config.toml missing model',
-      );
-      assert.ok(
-        configContent.includes('forced_login_method = "api"'),
-        'config.toml missing forced_login_method',
-      );
       assert.ok(configContent.includes('openrouter.ai'), 'config.toml missing openrouter base_url');
+      assert.ok(
+        !configContent.includes('[profiles.falcon]'),
+        'config.toml should not contain legacy profile section',
+      );
 
       const catalogContent = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
       const entry = catalogContent.models.find(
@@ -290,9 +311,26 @@ describe('Codex Agent Launcher', () => {
       const configPath = path.join(sideEffectDir, 'config.toml');
       const catalogPath = path.join(sideEffectDir, 'model.json');
 
+      const profilePath = path.join(sideEffectDir, 'falcon.config.toml');
+      const profileContent = fs.readFileSync(profilePath, 'utf8');
+      const modelMatches = profileContent.match(/model = /g) ?? [];
+      assert.strictEqual(
+        modelMatches.length,
+        1,
+        'falcon.config.toml should have exactly one model setting',
+      );
+
       const configContent = fs.readFileSync(configPath, 'utf8');
-      const matches = configContent.match(/\[profiles\.falcon\]/g) ?? [];
-      assert.strictEqual(matches.length, 1, 'should have exactly one profiles.falcon section');
+      const providerMatches = configContent.match(/\[model_providers\.openrouter-ai\]/g) ?? [];
+      assert.strictEqual(
+        providerMatches.length,
+        1,
+        'config.toml should have exactly one openrouter-ai provider section',
+      );
+      assert.ok(
+        !configContent.includes('[profiles.falcon]'),
+        'config.toml should not contain legacy profile section',
+      );
 
       const catalogContent = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
       const entries = catalogContent.models.filter(
@@ -325,6 +363,61 @@ describe('Codex Agent Launcher', () => {
       const slugs = catalogContent.models.map((m: { slug: string }) => m.slug);
       assert.ok(slugs.includes('deepseek/deepseek-v4-flash:free'));
       assert.ok(slugs.includes('gpt-4o'));
+    });
+
+    test('should clean up legacy profiles.falcon and profile = "falcon" from config.toml', async () => {
+      const configPath = path.join(sideEffectDir, 'config.toml');
+      const legacyConfig = `
+profile = "falcon"
+
+[profiles.falcon]
+model = "legacy-model"
+model_provider = "legacy-provider"
+
+[model_providers.legacy-provider]
+name = "legacy-provider"
+`;
+      fs.writeFileSync(configPath, legacyConfig, 'utf8');
+
+      const config: GatewayConfig = {
+        env: {
+          OPENAI_API_KEY: 'sk-or-fake-key',
+          OPENAI_BASE_URL: 'https://openrouter.ai/api/v1',
+        },
+        baseUrl: 'https://openrouter.ai/api/v1',
+      };
+
+      process.env[ENV_CODEX_HOME] = sideEffectDir;
+
+      await launcher.resolveConfig(
+        config,
+        'openrouter',
+        'sk-or-fake-key',
+        'deepseek/deepseek-v4-flash:free',
+      );
+
+      const configContent = fs.readFileSync(configPath, 'utf8');
+      assert.ok(
+        !configContent.includes('[profiles.falcon]'),
+        'should remove legacy [profiles.falcon] section',
+      );
+      assert.ok(
+        !configContent.includes('profile = "falcon"'),
+        'should remove legacy profile = "falcon" line',
+      );
+      assert.ok(
+        configContent.includes('[model_providers.legacy-provider]'),
+        'should retain other existing sections',
+      );
+      assert.ok(
+        configContent.includes('[model_providers.openrouter-ai]'),
+        'should add new provider section',
+      );
+
+      const profilePath = path.join(sideEffectDir, 'falcon.config.toml');
+      assert.ok(fs.existsSync(profilePath), 'falcon.config.toml should exist');
+      const profileContent = fs.readFileSync(profilePath, 'utf8');
+      assert.ok(profileContent.includes('model = "deepseek/deepseek-v4-flash:free"'));
     });
   });
 });

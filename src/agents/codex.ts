@@ -200,6 +200,36 @@ function upsertSection(text: string, header: string, lines: string[]): string {
   return fileLines.join('\n');
 }
 
+function removeSection(text: string, header: string): string {
+  const fileLines = text.split(/\r?\n/);
+  const targetHeader = header.trim();
+  let startIndex = -1;
+  let endIndex = -1;
+
+  for (let i = 0; i < fileLines.length; i++) {
+    const trimmed = fileLines[i].trim();
+    if (trimmed === targetHeader) {
+      startIndex = i;
+      for (let j = i + 1; j < fileLines.length; j++) {
+        const nextTrimmed = fileLines[j].trim();
+        if (nextTrimmed.startsWith('[') && nextTrimmed.endsWith(']')) {
+          endIndex = j;
+          break;
+        }
+      }
+      if (endIndex === -1) {
+        endIndex = fileLines.length;
+      }
+      break;
+    }
+  }
+
+  if (startIndex !== -1) {
+    fileLines.splice(startIndex, endIndex - startIndex);
+  }
+  return fileLines.join('\n');
+}
+
 function ensureCodexConfig(
   codexDir: string,
   modelName: string,
@@ -261,7 +291,15 @@ function ensureCodexConfig(
     `wire_api = "responses"`,
   ];
 
-  text = upsertSection(text, `[profiles.${profileName}]`, profileLines);
+  // Remove legacy profile settings/table if present in config.toml
+  text = removeSection(text, `[profiles.${profileName}]`);
+
+  // Also remove profile = "falcon" line if present
+  text = text
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*profile\s*=\s*['"]falcon['"]/.test(line))
+    .join('\n');
+
   text = upsertSection(text, `[model_providers.${providerKey}]`, providerLines);
 
   // Privacy mode: disable analytics and feedback telemetry by default
@@ -269,5 +307,10 @@ function ensureCodexConfig(
   text = upsertSection(text, `[feedback]`, [`enabled = false`]);
 
   fs.writeFileSync(configPath, text, 'utf8');
+
+  // Write modern profile configuration file
+  const profileConfigPath = path.join(codexDir, `${profileName}.config.toml`);
+  fs.writeFileSync(profileConfigPath, profileLines.join('\n') + '\n', 'utf8');
+
   return catalogPath;
 }
