@@ -52,6 +52,10 @@ export class ClaudeLauncher implements AgentLauncher {
       env['ANTHROPIC_API_KEY'] = '';
     }
 
+    if (gatewaySlug === 'openrouter') {
+      env['CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY'] = '1';
+    }
+
     env['CLAUDE_CODE_ATTRIBUTION_HEADER'] = '0';
 
     // Full privacy mode for Claude Code.

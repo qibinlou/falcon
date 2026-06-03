@@ -142,6 +142,27 @@ describe('Claude Agent Launcher', () => {
     }
   });
 
+  test('resolveConfig should set CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY for openrouter gateway', async () => {
+    const config: GatewayConfig = {
+      env: {
+        ANTHROPIC_API_KEY: 'sk-or-testkey',
+        ANTHROPIC_BASE_URL: 'https://openrouter.ai/api',
+      },
+    };
+
+    const resolved = await launcher.resolveConfig(
+      config,
+      'openrouter',
+      'sk-or-testkey',
+      'anthropic/claude-3.5-sonnet',
+    );
+    const env = resolved.env;
+
+    assert.strictEqual(env['CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY'], '1');
+    assert.strictEqual(env['ANTHROPIC_AUTH_TOKEN'], 'sk-or-testkey');
+    assert.strictEqual(env['ANTHROPIC_API_KEY'], '');
+  });
+
   test('resolveConfig should set CLAUDE_CONFIG_DIR and create it', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-test-'));
     const testConfigDir = path.join(tempDir, 'claude');
@@ -168,7 +189,7 @@ describe('Claude Agent Launcher', () => {
       delete process.env[ENV_CLAUDE_CONFIG_DIR];
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -214,7 +235,7 @@ describe('Claude Agent Launcher', () => {
       }
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -226,7 +247,7 @@ describe('Claude Agent Launcher', () => {
     delete process.env[ENV_CLAUDE_CONFIG_DIR];
 
     // Mock fs.mkdirSync and fs.existsSync to prevent writing to ~/.falcon
-    mock.method(fs, 'mkdirSync', () => {});
+    mock.method(fs, 'mkdirSync', () => { });
     mock.method(fs, 'existsSync', () => true);
 
     try {
