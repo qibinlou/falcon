@@ -172,3 +172,4 @@ node dist/cli.js launch <agent> [options]
 - Don't run lint/types/format npm tasks in the middle of your work; only run them before wrapping up and handing over back to the user. Run `npm run check:all` to run all checks in one go to save time and tokens.
 - I haven't release the software to public yet, so it's safe to make breaking changes if needed.
 - When explicitly asked to create a commit, use the co-author approach by adding a `Co-authored-by:` trailer at the end of the commit message.
+- Run `loadenv` command when you run into API key related env issues. Run `clearenv` command to clear the keys loaded before.
