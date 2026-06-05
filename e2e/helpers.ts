@@ -100,13 +100,17 @@ export function spawnCli(args: string[], opts: SpawnOptions = {}): SpawnResult {
 
   const inputBuffer = typeof opts.input === 'string' ? Buffer.from(opts.input, 'utf8') : opts.input;
 
-  const result: SpawnSyncReturns<Buffer> = spawnSync('npx', ['tsx', CLI_ENTRY, ...args], {
-    cwd: opts.cwd ?? ROOT,
-    env: env as NodeJS.ProcessEnv,
-    timeout: opts.timeout ?? 15_000,
-    encoding: 'buffer',
-    input: inputBuffer,
-  });
+  const result: SpawnSyncReturns<Buffer> = spawnSync(
+    process.execPath,
+    ['--import', 'tsx', CLI_ENTRY, ...args],
+    {
+      cwd: opts.cwd ?? ROOT,
+      env: env as NodeJS.ProcessEnv,
+      timeout: opts.timeout ?? 15_000,
+      encoding: 'buffer',
+      input: inputBuffer,
+    },
+  );
 
   const stdout = (result.stdout ?? Buffer.alloc(0)).toString('utf8');
   const stderr = (result.stderr ?? Buffer.alloc(0)).toString('utf8');

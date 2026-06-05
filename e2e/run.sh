@@ -2,7 +2,7 @@
 # e2e/run.sh
 # Run all Falcon e2e test suites and print a summary.
 # Usage: bash e2e/run.sh
-#        npm run e2e
+#        pnpm run e2e
 
 set -euo pipefail
 

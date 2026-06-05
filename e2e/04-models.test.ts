@@ -92,7 +92,9 @@ describe('Models Command — OpenAI', () => {
 
 describe('Models Command — Error cases', () => {
   it('exits 1 for unknown gateway', () => {
-    const r = spawnCli(['models', '-g', 'notexists']);
+    const r = spawnCli(['models', '-g', 'notexists'], {
+      env: buildEnv({ OPENAI_API_KEY: 'test-key' }),
+    });
     assertExitCode(r, 1);
     assertContains(r.stdout + r.stderr, 'notexists', 'gateway name in error');
   });

@@ -41,11 +41,11 @@ npx falconsh launch
 #### Option B: Global Installation
 Install the package globally:
 ```bash
-# npm
-npm install -g falconsh
-
 # pnpm
 pnpm add -g falconsh
+
+# npm
+npm install -g falconsh
 
 # bun
 bun add -g falconsh
@@ -61,7 +61,7 @@ git clone https://github.com/qibinlou/falcon.git
 cd falcon
 
 # Install dependencies using your preferred package manager:
-npm install   # or pnpm install / bun install
+pnpm install   # or npm install / bun install
 ```
 
 ### 2. Configure Your Keys
@@ -78,7 +78,7 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 ### 3. Examples
 
-You can run Falcon using `npx falconsh`, globally via `falcon`, or from source (using `npm run dev --` in place of `falcon`):
+You can run Falcon using `npx falconsh` (or `pnpm dlx falconsh`), globally via `falcon`, or from source (using `pnpm run dev --` in place of `falcon`):
 
 ```bash
 # Start in interactive mode to pick agent and LLM provider
@@ -177,22 +177,22 @@ Manage the development loop with the following scripts:
 
 ```bash
 # Compile and check TypeScript types
-npm run check:types
+pnpm run check:types
 
 # Format and autofix codebase with Biome
-npm run check:format
+pnpm run check:format
 
 # Lint codebase with Biome
-npm run check:lint
+pnpm run check:lint
 
 # Run all unit tests
-npm run test
+pnpm run test
 
 # Run end-to-end (e2e) tests
-npm run e2e
+pnpm run e2e
 
 # Compile production bundle
-npm run build
+pnpm run build
 ```
 
 ---

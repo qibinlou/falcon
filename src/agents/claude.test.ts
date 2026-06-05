@@ -189,7 +189,7 @@ describe('Claude Agent Launcher', () => {
       delete process.env[ENV_CLAUDE_CONFIG_DIR];
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) { }
+      } catch (_) {}
     }
   });
 
@@ -235,7 +235,7 @@ describe('Claude Agent Launcher', () => {
       }
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) { }
+      } catch (_) {}
     }
   });
 
@@ -247,7 +247,7 @@ describe('Claude Agent Launcher', () => {
     delete process.env[ENV_CLAUDE_CONFIG_DIR];
 
     // Mock fs.mkdirSync and fs.existsSync to prevent writing to ~/.falcon
-    mock.method(fs, 'mkdirSync', () => { });
+    mock.method(fs, 'mkdirSync', () => {});
     mock.method(fs, 'existsSync', () => true);
 
     try {

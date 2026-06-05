@@ -1,4 +1,4 @@
-# 🦅 Falcon Agent Context & Developer Guide
+# 🦅 Falcon Agent Context & Developer Guideasfasfaa
 
 Welcome, Agent! This document provides comprehensive context on the Falcon codebase, including user guides, CLI references, architecture details, and development guidelines, maximizing your session context efficiency.
 
@@ -25,7 +25,7 @@ Falcon is published publicly on npm at [`falconsh`](https://www.npmjs.com/packag
 ```bash
 npx falconsh launch <agent>
 ```
-Or you can install it globally via `npm install -g falconsh` and run it using the `falcon` command directly.
+Or you can install it globally via `pnpm add -g falconsh` (or `npm install -g falconsh`) and run it using the `falcon` command directly.
 
 To launch an agent using the interactive model picker:
 
@@ -122,13 +122,13 @@ Here is how the codebase is structured:
 
 ```bash
 # Setup
-npm install
+pnpm install
 
 # Dev Mode
-npm run dev -- launch <agent> [options] [agentArgs...]
+pnpm run dev -- launch <agent> [options] [agentArgs...]
 
 # Production Build
-npm run build
+pnpm run build
 
 # Start Build Output
 node dist/cli.js launch <agent> [options]
@@ -168,8 +168,8 @@ node dist/cli.js launch <agent> [options]
 
 
 ## Agentic Workflow Rules
-- Don't run `npm run build` or `npm run dev` unless explicitly asked.
-- Don't run lint/types/format npm tasks in the middle of your work; only run them before wrapping up and handing over back to the user. Run `npm run check:all` to run all checks in one go to save time and tokens.
+- Don't run `pnpm run build` or `pnpm run dev` unless explicitly asked.
+- Don't run lint/types/format tasks in the middle of your work; only run them before wrapping up and handing over back to the user. Run `pnpm run check:all` to run all checks in one go to save time and tokens.
 - I haven't release the software to public yet, so it's safe to make breaking changes if needed.
 - When explicitly asked to create a commit, use the co-author approach by adding a `Co-authored-by:` trailer at the end of the commit message.
 - Run `loadenv` command when you run into API key related env issues. Run `clearenv` command to clear the keys loaded before.
