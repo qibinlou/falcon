@@ -158,9 +158,9 @@ async function handleLaunch(
     const gatewayName = options.gateway;
     const targetGateway = gatewayName
       ? detected.find(
-        (d) =>
-          d.gateway.slug === gatewayName || d.name.toLowerCase() === gatewayName.toLowerCase(),
-      )
+          (d) =>
+            d.gateway.slug === gatewayName || d.name.toLowerCase() === gatewayName.toLowerCase(),
+        )
       : detected[0];
 
     let resolvedConfig: ResolvedConfig = { env: {} };
@@ -200,12 +200,11 @@ async function handleLaunch(
 
     console.debug(`DEBUG: [CLI] Resolved Config:`, resolvedConfig);
 
-
     const cleanUp = () => {
       if (spawnConfig.cleanup) {
         try {
           spawnConfig.cleanup();
-        } catch (_) { }
+        } catch (_) {}
       }
     };
 
@@ -340,10 +339,10 @@ program
     const targetGateway = options.gateway;
     const target = targetGateway
       ? detected.find(
-        (d) =>
-          d.gateway.slug === targetGateway ||
-          d.name.toLowerCase() === targetGateway.toLowerCase(),
-      )
+          (d) =>
+            d.gateway.slug === targetGateway ||
+            d.name.toLowerCase() === targetGateway.toLowerCase(),
+        )
       : detected[0];
 
     if (!target) {

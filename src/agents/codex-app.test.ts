@@ -42,7 +42,7 @@ describe('Codex App (Desktop) Launcher', () => {
   });
 
   test('should have correct details', () => {
-    assert.strictEqual(launcher.name, 'Codex App');
+    assert.strictEqual(launcher.name, 'Codex Desktop App');
     assert.strictEqual(launcher.slug, 'codex-app');
   });
 
