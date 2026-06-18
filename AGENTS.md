@@ -136,6 +136,9 @@ pnpm run build
 
 # Start Build Output
 node dist/cli.js launch <agent> [options]
+
+# Istall globally on current device
+pnpm add -g .
 ```
 
 ---
