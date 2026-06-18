@@ -6,7 +6,7 @@ Welcome, Agent! This document provides comprehensive context on the Falcon codeb
 
 ## 📖 System Overview & Features
 
-**Falcon** is a CLI and Terminal User Interface (TUI) tool written in TypeScript. It wraps coding agents—specifically [Codex CLI](https://github.com/openai/codex), [Codex Desktop App](./src/agents/codex-app.ts) (Electron build), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to launch coding agents with a single command.
+**Falcon** is a CLI and Terminal User Interface (TUI) tool written in TypeScript. It wraps coding agents—specifically [Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/) (Electron build), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to launch coding agents with a single command.
 
 ### Key Features
 - **Multi-gateway support** — Auto-detects API keys from OpenRouter, OpenAI, Anthropic, and Cloudflare.

@@ -10,7 +10,7 @@
 [![Built with TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg?style=flat-square&color=3178c6)](https://www.typescriptlang.org/)
 [![UI: Ink](https://img.shields.io/badge/UI-Ink%20%26%20React-red.svg?style=flat-square&color=ff5a5f)](https://github.com/vadimdemedes/ink)
 
-Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI Codex CLI](https://github.com/openai/codex), [Codex Desktop App](./src/agents/codex-app.ts), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
+Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
 
 ---
 
