@@ -10,7 +10,7 @@
 [![Built with TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg?style=flat-square&color=3178c6)](https://www.typescriptlang.org/)
 [![UI: Ink](https://img.shields.io/badge/UI-Ink%20%26%20React-red.svg?style=flat-square&color=ff5a5f)](https://github.com/vadimdemedes/ink)
 
-Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI Codex](https://github.com/openai/codex), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
+Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI Codex CLI](https://github.com/openai/codex), [Codex Desktop App](./src/agents/codex-app.ts), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
 
 ---
 
@@ -90,7 +90,10 @@ falcon claude
 # Shorthand to run OpenCode
 falcon opencode
 
-# Launch codex with a specific model directly (skips TUI)
+# Shorthand to run Codex Desktop App
+falcon codex-app
+
+# Launch codex CLI with a specific model directly (skips TUI)
 falcon codex -m claude-opus-4-8
 
 # Launch claude with a specific model directly (skips TUI)
@@ -106,7 +109,8 @@ falcon claude --model chat-latest
 | Command | Description |
 | :--- | :--- |
 | `falcon launch [agent] [options] [agentArgs...]` | Launches a coding agent (e.g. `codex`, `claude`, or `opencode`) with options. |
-| `falcon codex [options] [agentArgs...]` | Shorthand to launch OpenAI Codex directly. |
+| `falcon codex [options] [agentArgs...]` | Shorthand to launch OpenAI Codex CLI directly. |
+| `falcon codex-app [options] [agentArgs...]` | Shorthand to launch Codex Desktop App directly. |
 | `falcon claude [options] [agentArgs...]` | Shorthand to launch Claude Code directly. |
 | `falcon opencode [options] [agentArgs...]` | Shorthand to launch OpenCode directly. |
 | `falcon models [options]` | Query and list available models from detected API gateways. |
@@ -142,7 +146,9 @@ Falcon is structured to make extending gateways and agents straightforward:
 *   **[src/config.ts](./src/config.ts)**: Implements AES-256-CBC encryption to store credentials locally in `~/.falcon/config.json`.
 *   **[src/agents/](./src/agents/)**: Agent wrappers implementing `AgentLauncher` profile compilation and launch arguments.
     *   [claude.ts](./src/agents/claude.ts): Disables Claude telemetry/feedback and forces full privacy.
-    *   [codex.ts](./src/agents/codex.ts): Updates Codex's `config.toml` profiles, `model.json` catalog and disables analytics.
+    *   [codex.ts](./src/agents/codex.ts): Updates Codex CLI's `config.toml` profiles, `model.json` catalog and disables analytics.
+    *   [codex-app.ts](./src/agents/codex-app.ts): Configures Codex Desktop App's top-level config keys, `auth.json`, and custom isolated catalog.
+    *   [codex-utils.ts](./src/agents/codex-utils.ts): Shared configuration helpers for Codex CLI and Desktop App launchers.
     *   [opencode.ts](./src/agents/opencode.ts): Manages OpenCode's config directory and dynamically updates `opencode.json` config settings.
 *   **[src/gateways/](./src/gateways/)**: Providers logic matching API payloads to model metadata lists.
 *   **[src/ui/](./src/ui/)**: Reactive terminal components built on Ink and React.

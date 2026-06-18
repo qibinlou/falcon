@@ -6,7 +6,7 @@ Welcome, Agent! This document provides comprehensive context on the Falcon codeb
 
 ## 📖 System Overview & Features
 
-**Falcon** is a CLI and Terminal User Interface (TUI) tool written in TypeScript. It wraps coding agents—specifically [Codex](https://github.com/openai/codex), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to launch coding agents with a single command.
+**Falcon** is a CLI and Terminal User Interface (TUI) tool written in TypeScript. It wraps coding agents—specifically [Codex CLI](https://github.com/openai/codex), [Codex Desktop App](./src/agents/codex-app.ts) (Electron build), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to launch coding agents with a single command.
 
 ### Key Features
 - **Multi-gateway support** — Auto-detects API keys from OpenRouter, OpenAI, Anthropic, and Cloudflare.
@@ -39,6 +39,7 @@ export OPENAI_API_KEY=sk-...
 
 # Launch with interactive model picker
 falcon launch codex
+falcon launch codex-app
 falcon launch claude
 falcon launch opencode
 
@@ -86,6 +87,7 @@ Falcon detects and initializes gateways based on the presence of specific enviro
 ### 🛠️ Agent-Specific Side-Effects
 
 *   **Codex**: Resolves target directory via `process.env.CODEX_HOME` (defaulting to `~/.codex/`). Modifies `config.toml` profile sections `[profiles.falcon]` and `[model_providers.<hostname>]`, and updates the list in `model.json`.
+*   **Codex Desktop App**: Resolves configuration directory under `process.env.FALCON_DIR/codex-app` or `~/.falcon/codex-app`. Dynamically manages top-level keys in `config.toml`, parses `model.json`, and persists key auth in `auth.json`.
 *   **Claude Code**: Directly relies on environment variables (`ANTHROPIC_API_KEY` or custom compatible endpoints like `ANTHROPIC_BASE_URL` mapped by the active gateway).
 *   **OpenCode**: Resolves config directory via `process.env.OPENCODE_CONFIG_DIR` (defaulting to `~/.falcon/opencode/` or using `FALCON_DIR`) and updates the `opencode.json` configuration settings.
 
@@ -100,6 +102,8 @@ Here is how the codebase is structured:
 *   **[src/agents/](./src/agents/)**: Directory containing agent interfaces and wrappers.
     *   **[src/agents/index.ts](./src/agents/index.ts)**: Declares the [Agent](./src/agents/index.ts#L3) interface and the `ALL_AGENTS` registry list.
     *   **[src/agents/codex.ts](./src/agents/codex.ts)**: Wrapper for Codex. Dynamically generates or updates Codex's configuration files (profiles and providers in `~/.codex/config.toml`) and the local model catalog (`~/.codex/model.json`).
+    *   **[src/agents/codex-app.ts](./src/agents/codex-app.ts)**: Wrapper for Codex Desktop App. Dynamically generates or updates configuration files and `auth.json` key-based credentials for the Electron app.
+    *   **[src/agents/codex-utils.ts](./src/agents/codex-utils.ts)**: Extracted configuration helpers shared by both Codex CLI and Desktop App launchers.
     *   **[src/agents/claude.ts](./src/agents/claude.ts)**: Wrapper for Claude Code. Passes `--dangerously-skip-permissions` to bypass prompts in sandbox environments.
     *   **[src/agents/opencode.ts](./src/agents/opencode.ts)**: Wrapper for OpenCode. Dynamically generates or updates the local `opencode.json` config settings.
 *   **[src/gateways/](./src/gateways/)**: Directory containing API gateways/proxies.
