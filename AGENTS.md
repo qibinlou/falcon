@@ -175,6 +175,7 @@ pnpm add -g .
 
 
 ## Agentic Workflow Rules
+- Use TDD as your primary development approach to ensure the tests are effective and always up to date with the latest business logics. Follow the cycle of test -> implement -> test -> refactor.
 - Don't run `pnpm run build` or `pnpm run dev` unless explicitly asked.
 - Don't run lint/types/format tasks in the middle of your work; only run them before wrapping up and handing over back to the user. Run `pnpm run check:all` to run all checks in one go to save time and tokens.
 - I haven't release the software to public yet, so it's safe to make breaking changes if needed.
