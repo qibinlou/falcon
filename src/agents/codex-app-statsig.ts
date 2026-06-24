@@ -2,7 +2,6 @@ import type { ChildProcess } from 'child_process';
 
 const STATSIG_MODEL_LIST_CONFIG_ID = '107580212';
 const STATSIG_CACHE_PREFIX = 'statsig.cached.evaluations.';
-const CODEX_APP_MODEL_LABEL_PREFIX = 'npm ';
 const DEFAULT_BOOTSTRAP_TIMEOUT_MS = 20_000;
 const DEFAULT_POLL_INTERVAL_MS = 500;
 
@@ -37,14 +36,18 @@ interface LabelCheckResult {
   hasCustomLabel: boolean;
 }
 
-export function buildCodexAppModelDisplayName(modelName: string): string {
-  return `${CODEX_APP_MODEL_LABEL_PREFIX}${modelName}`;
+export function buildCodexAppModelDisplayName(modelName: string, gatewaySlug?: string): string {
+  if (gatewaySlug && gatewaySlug !== 'none') {
+    return `${modelName} - ${gatewaySlug}`;
+  }
+  return modelName;
 }
 
 export async function patchCodexAppModelLabelAfterSpawn(
   proc: ChildProcess,
   debugPort: number,
   modelName: string,
+  gatewaySlug?: string,
   allCatalogModels?: string[],
 ): Promise<void> {
   if (!modelName || !Number.isFinite(debugPort) || debugPort <= 0) {
@@ -71,11 +74,11 @@ export async function patchCodexAppModelLabelAfterSpawn(
       }
 
       await client.send('Page.reload', { ignoreCache: true });
-      const visible = await waitForExpectedModelLabel(client, modelName);
+      const visible = await waitForExpectedModelLabel(client, modelName, gatewaySlug);
       if (!visible.hasExpectedLabel) {
         await waitForStatsigCachePatch(client, modelNames);
         await client.send('Page.reload', { ignoreCache: true });
-        await waitForExpectedModelLabel(client, modelName);
+        await waitForExpectedModelLabel(client, modelName, gatewaySlug);
       }
     } finally {
       client.close();
@@ -244,12 +247,13 @@ function patchStatsigCacheInRenderer({
 async function waitForExpectedModelLabel(
   client: CdpClient,
   modelName: string,
+  gatewaySlug?: string,
 ): Promise<LabelCheckResult> {
   const startedAt = Date.now();
   let result: LabelCheckResult = { hasExpectedLabel: false, hasCustomLabel: false };
 
   while (Date.now() - startedAt < DEFAULT_BOOTSTRAP_TIMEOUT_MS / 2) {
-    result = await checkModelLabel(client, modelName);
+    result = await checkModelLabel(client, modelName, gatewaySlug);
     if (result.hasExpectedLabel) {
       return result;
     }
@@ -259,12 +263,16 @@ async function waitForExpectedModelLabel(
   return result;
 }
 
-async function checkModelLabel(client: CdpClient, modelName: string): Promise<LabelCheckResult> {
+async function checkModelLabel(
+  client: CdpClient,
+  modelName: string,
+  gatewaySlug?: string,
+): Promise<LabelCheckResult> {
   const response = await client.send('Runtime.evaluate', {
     expression: `(() => {
       const text = document.body?.innerText || '';
       return {
-        hasExpectedLabel: text.includes(${JSON.stringify(buildCodexAppModelDisplayName(modelName))}),
+        hasExpectedLabel: text.includes(${JSON.stringify(buildCodexAppModelDisplayName(modelName, gatewaySlug))}),
         hasCustomLabel: text.includes('Custom'),
       };
     })()`,

@@ -5,6 +5,7 @@ export interface ResolvedConfig {
   env: Record<string, string>;
   baseUrl?: string;
   cleanup?: () => void;
+  gatewaySlug?: string;
 }
 
 export interface SpawnConfig {

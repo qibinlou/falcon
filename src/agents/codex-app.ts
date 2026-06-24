@@ -82,7 +82,7 @@ export class CodexAppLauncher implements AgentLauncher {
 
     if (model) {
       try {
-        await ensureCodexAppConfig(codexDir, model, baseUrl, env['OPENAI_BASE_URL']);
+        await ensureCodexAppConfig(codexDir, gatewaySlug, model, baseUrl, env['OPENAI_BASE_URL']);
       } catch (err) {
         console.error(
           `Warning: Failed to configure Codex App: ${err instanceof Error ? err.message : err}`,
@@ -90,7 +90,7 @@ export class CodexAppLauncher implements AgentLauncher {
       }
     }
 
-    return { env, baseUrl, cleanup };
+    return { env, baseUrl, cleanup, gatewaySlug };
   }
 
   buildSpawnConfig(
@@ -125,7 +125,14 @@ export class CodexAppLauncher implements AgentLauncher {
       cleanup: resolvedConfig.cleanup,
       afterSpawn:
         Number.isFinite(debugPort) && debugPort > 0
-          ? (proc) => patchCodexAppModelLabelAfterSpawn(proc, debugPort, _model, allCatalogModels)
+          ? (proc) =>
+              patchCodexAppModelLabelAfterSpawn(
+                proc,
+                debugPort,
+                _model,
+                resolvedConfig.gatewaySlug,
+                allCatalogModels,
+              )
           : undefined,
     };
   }
@@ -167,6 +174,7 @@ function ensureCodexAuth(codexDir: string, apiKey: string): void {
  */
 async function ensureCodexAppConfig(
   codexDir: string,
+  gatewaySlug: string,
   modelName: string,
   resolvedBaseUrl?: string,
   envBaseUrl?: string,
@@ -179,8 +187,30 @@ async function ensureCodexAppConfig(
   const catalogPath = path.join(codexDir, 'model.json');
 
   await writeCodexModelCatalog(catalogPath, modelName, {
-    displayName: buildCodexAppModelDisplayName(modelName),
+    displayName: buildCodexAppModelDisplayName(modelName, gatewaySlug),
   });
+
+  // Rewrite all model display names in the catalog to follow the "{model_id} - {gateway_name}" convention
+  try {
+    if (fs.existsSync(catalogPath)) {
+      const data = fs.readFileSync(catalogPath, 'utf8');
+      const parsed = JSON.parse(data);
+      if (parsed && Array.isArray(parsed.models)) {
+        for (const model of parsed.models) {
+          if (model && typeof model.slug === 'string') {
+            let cleanSlug = model.slug;
+            if (cleanSlug.startsWith('npm ')) {
+              cleanSlug = cleanSlug.slice(4);
+            }
+            model.display_name = buildCodexAppModelDisplayName(cleanSlug, gatewaySlug);
+          }
+        }
+        fs.writeFileSync(catalogPath, JSON.stringify(parsed, null, 2), 'utf8');
+      }
+    }
+  } catch (_e) {
+    // Ignore rewrite error
+  }
 
   let baseUrl =
     resolvedBaseUrl || envBaseUrl || process.env['OPENAI_BASE_URL'] || DEFAULT_OPENAI_BASE_URL;

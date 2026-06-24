@@ -122,7 +122,7 @@ describe('Codex App (Desktop) Launcher', () => {
       (m: { slug: string; display_name: string }) => m.slug === 'deepseek/deepseek-v4',
     );
     assert.ok(entry, 'catalog should contain the model');
-    assert.strictEqual(entry.display_name, 'npm deepseek/deepseek-v4');
+    assert.strictEqual(entry.display_name, 'deepseek/deepseek-v4 - openrouter');
     assert.strictEqual(entry.context_window, 163840);
     assert.deepStrictEqual(entry.input_modalities, ['text']);
   });
