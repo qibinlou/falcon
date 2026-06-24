@@ -18,7 +18,7 @@ Falcon is an elegant command-line interface (CLI) and interactive Terminal User 
 
 *   **API Gateway Abstraction**: No more memorizing gateway endpoints or manual token configurations. Falcon automatically maps models and manages API endpoints across OpenAI, Anthropic, OpenRouter, and Cloudflare AI Gateway.
 *   **Bifrost Translation Engine**: Want to run Anthropic's Claude Code using an OpenAI API key? Or run Codex using an Anthropic endpoint? Falcon utilizes a built-in proxy engine (`@maximhq/bifrost`) under the hood to automatically translate Anthropic's messaging protocol to OpenAI's completion format and vice-versa.
-*   **TUI Model Catalog Explorer**: Search and filter through hundreds of models in a rich, keyboard-navigable terminal interface. View context lengths, modalities (text/vision), and token pricing directly before launching your agent.
+*   **TUI Model Catalog Explorer**: Search and filter through hundreds of models in a rich, keyboard-navigable terminal interface. View context lengths, modalities, and token pricing directly before launching your agent. Falcon derives those details from live gateway catalogs and keeps a local cache for repeat launches.
 *   **Security & Encryption**: Your API keys are encrypted at rest using platform-specific material and AES-256-CBC, stored securely under `~/.falcon/config.json`.
 *   **Opt-Out Telemetry by Default**: Respects your privacy. Falcon automatically configures downstream agents to run in full privacy mode, disabling analytics, feedback prompts, telemetry, and non-essential external connections.
 *   **Pass-Through Command Forwarding**: Respects native options. Any extra flag or argument passed to Falcon is forwarded directly to the underlying agent binary.
@@ -146,9 +146,9 @@ Falcon is structured to make extending gateways and agents straightforward:
 *   **[src/config.ts](./src/config.ts)**: Implements AES-256-CBC encryption to store credentials locally in `~/.falcon/config.json`.
 *   **[src/agents/](./src/agents/)**: Agent wrappers implementing `AgentLauncher` profile compilation and launch arguments.
     *   [claude.ts](./src/agents/claude.ts): Disables Claude telemetry/feedback and forces full privacy.
-    *   [codex.ts](./src/agents/codex.ts): Updates Codex CLI's `config.toml` profiles, `model.json` catalog and disables analytics.
-    *   [codex-app.ts](./src/agents/codex-app.ts): Configures Codex Desktop App's top-level config keys, `auth.json`, and custom isolated catalog.
-    *   [codex-utils.ts](./src/agents/codex-utils.ts): Shared configuration helpers for Codex CLI and Desktop App launchers.
+*   [codex.ts](./src/agents/codex.ts): Updates Codex CLI's `config.toml` profile, writes `model.json` from OpenRouter catalog metadata, and disables analytics.
+*   [codex-app.ts](./src/agents/codex-app.ts): Configures Codex Desktop App's top-level config keys, `auth.json`, and custom isolated catalog built from the same metadata source.
+*   [codex-utils.ts](./src/agents/codex-utils.ts): Shared configuration helpers for Codex CLI and Desktop App launchers, including OpenRouter-backed context window and modality lookup with local caching.
     *   [opencode.ts](./src/agents/opencode.ts): Manages OpenCode's config directory and dynamically updates `opencode.json` config settings.
 *   **[src/gateways/](./src/gateways/)**: Providers logic matching API payloads to model metadata lists.
 *   **[src/ui/](./src/ui/)**: Reactive terminal components built on Ink and React.

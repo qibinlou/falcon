@@ -1,6 +1,11 @@
 import * as fs from 'fs';
+import {
+  fetchModelMetadataCatalog,
+  normalizeModelId,
+  type ModelMetadata,
+} from '../gateways/shared/modelEnricher.js';
 
-export function getContextWindow(modelName: string): number {
+function fallbackContextWindow(modelName: string): number {
   const name = modelName.toLowerCase();
   if (name.includes('claude-3')) {
     return 200000;
@@ -17,7 +22,7 @@ export function getContextWindow(modelName: string): number {
   return 128000; // fallback default
 }
 
-export function getModalities(modelName: string): string[] {
+function fallbackModalities(modelName: string): string[] {
   const name = modelName.toLowerCase();
   const hasVision =
     name.includes('vision') ||
@@ -31,7 +36,31 @@ export function getModalities(modelName: string): string[] {
   return modalities;
 }
 
-export function writeCodexModelCatalog(catalogPath: string, modelName: string): void {
+function findModelMetadata(
+  catalog: Record<string, ModelMetadata>,
+  modelName: string,
+): ModelMetadata | undefined {
+  const id = modelName.toLowerCase();
+  const normalized = normalizeModelId(modelName);
+  return catalog[id] || catalog[normalized];
+}
+
+export async function getContextWindow(modelName: string): Promise<number> {
+  const catalog = await fetchModelMetadataCatalog();
+  const metadata = findModelMetadata(catalog, modelName);
+  return metadata?.contextLength || fallbackContextWindow(modelName);
+}
+
+export async function getModalities(modelName: string): Promise<string[]> {
+  const catalog = await fetchModelMetadataCatalog();
+  const metadata = findModelMetadata(catalog, modelName);
+  return metadata?.modalities ?? fallbackModalities(modelName);
+}
+
+export async function writeCodexModelCatalog(
+  catalogPath: string,
+  modelName: string,
+): Promise<void> {
   let catalog: { models: { slug: string; [key: string]: unknown }[] } = { models: [] };
   if (fs.existsSync(catalogPath)) {
     try {
@@ -45,8 +74,10 @@ export function writeCodexModelCatalog(catalogPath: string, modelName: string): 
     }
   }
 
-  const contextWindow = getContextWindow(modelName);
-  const modalities = getModalities(modelName);
+  const catalogMetadata = await fetchModelMetadataCatalog();
+  const metadata = findModelMetadata(catalogMetadata, modelName);
+  const contextWindow = metadata?.contextLength || fallbackContextWindow(modelName);
+  const modalities = metadata?.modalities ?? fallbackModalities(modelName);
   const truncationMode = modelName.includes('/') ? 'tokens' : 'bytes';
 
   const entry = {

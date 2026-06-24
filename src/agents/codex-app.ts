@@ -75,7 +75,7 @@ export class CodexAppLauncher implements AgentLauncher {
 
     if (model) {
       try {
-        ensureCodexAppConfig(codexDir, model, baseUrl, env['OPENAI_BASE_URL']);
+        await ensureCodexAppConfig(codexDir, model, baseUrl, env['OPENAI_BASE_URL']);
       } catch (err) {
         console.error(
           `Warning: Failed to configure Codex App: ${err instanceof Error ? err.message : err}`,
@@ -133,12 +133,12 @@ function ensureCodexAuth(codexDir: string, apiKey: string): void {
  * profile flag, so the picked model + provider are written as **top-level**
  * `config.toml` keys, alongside the provider section and the model catalog.
  */
-function ensureCodexAppConfig(
+async function ensureCodexAppConfig(
   codexDir: string,
   modelName: string,
   resolvedBaseUrl?: string,
   envBaseUrl?: string,
-): void {
+): Promise<void> {
   if (!fs.existsSync(codexDir)) {
     fs.mkdirSync(codexDir, { recursive: true, mode: 0o700 });
   }
@@ -146,7 +146,7 @@ function ensureCodexAppConfig(
   const configPath = path.join(codexDir, 'config.toml');
   const catalogPath = path.join(codexDir, 'model.json');
 
-  writeCodexModelCatalog(catalogPath, modelName);
+  await writeCodexModelCatalog(catalogPath, modelName);
 
   let baseUrl =
     resolvedBaseUrl || envBaseUrl || process.env['OPENAI_BASE_URL'] || DEFAULT_OPENAI_BASE_URL;

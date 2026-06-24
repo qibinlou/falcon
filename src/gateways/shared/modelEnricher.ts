@@ -1,8 +1,12 @@
+import fs from 'fs';
+import path from 'path';
+import { DEFAULT_FALCON_DIR, ENV_FALCON_DIR } from '../../constants.js';
 import { formatPricePerM } from '../../utils.js';
 import type { ModelInfo } from '../index.js';
 
 export interface ModelMetadata {
   contextLength: number;
+  modalities?: string[];
   pricing: {
     prompt: string;
     completion: string;
@@ -44,6 +48,14 @@ export function normalizeModelId(id: string): string {
 }
 
 let metadataCache: Record<string, ModelMetadata> | null = null;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const CACHE_VERSION = 1;
+
+interface CachedMetadataCatalog {
+  version: number;
+  fetchedAt: number;
+  models: Record<string, ModelMetadata>;
+}
 
 export function setLocalModelMetadataCache(cache: Record<string, ModelMetadata> | null): void {
   metadataCache = cache;
@@ -53,24 +65,108 @@ export function clearModelMetadataCache(): void {
   metadataCache = null;
 }
 
+function isTestEnvironment(): boolean {
+  return process.env.NODE_ENV === 'test' || process.argv.some((arg) => arg.includes('--test'));
+}
+
+function getMetadataCachePath(): string {
+  return (
+    process.env.FALCON_MODEL_METADATA_CACHE_PATH ||
+    path.join(process.env[ENV_FALCON_DIR] || DEFAULT_FALCON_DIR, 'cache', 'openrouter-models.json')
+  );
+}
+
+function readCachedMetadataCatalog(allowStale = false): Record<string, ModelMetadata> | null {
+  try {
+    const raw = fs.readFileSync(getMetadataCachePath(), 'utf8');
+    const parsed = JSON.parse(raw) as Partial<CachedMetadataCatalog>;
+    if (
+      parsed.version !== CACHE_VERSION ||
+      typeof parsed.fetchedAt !== 'number' ||
+      !parsed.models ||
+      typeof parsed.models !== 'object'
+    ) {
+      return null;
+    }
+
+    const isFresh = Date.now() - parsed.fetchedAt < CACHE_TTL_MS;
+    if (!isFresh && !allowStale) {
+      return null;
+    }
+
+    return parsed.models as Record<string, ModelMetadata>;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedMetadataCatalog(models: Record<string, ModelMetadata>): void {
+  try {
+    const cachePath = getMetadataCachePath();
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    const payload: CachedMetadataCatalog = {
+      version: CACHE_VERSION,
+      fetchedAt: Date.now(),
+      models,
+    };
+    fs.writeFileSync(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+  } catch {
+    // Best-effort cache only; catalog lookups still work from memory.
+  }
+}
+
+function normalizeModalities(modalities: unknown): string[] | undefined {
+  if (!Array.isArray(modalities)) {
+    return undefined;
+  }
+
+  const normalized = Array.from(
+    new Set(
+      modalities
+        .filter((modality): modality is string => typeof modality === 'string')
+        .map((modality) => modality.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 export async function fetchModelMetadataCatalog(): Promise<Record<string, ModelMetadata>> {
   if (metadataCache) {
     return metadataCache;
   }
 
-  // Skip remote fetch in test environment unless pre-cached
-  if (process.env.NODE_ENV === 'test') {
+  const shouldUseDiskCache = !isTestEnvironment() || !!process.env.FALCON_MODEL_METADATA_CACHE_PATH;
+  if (shouldUseDiskCache) {
+    const cached = readCachedMetadataCatalog();
+    if (cached) {
+      metadataCache = cached;
+      return cached;
+    }
+  }
+
+  // Skip remote fetch in test environment unless pre-cached.
+  if (isTestEnvironment() && process.env.FALCON_ALLOW_MODEL_METADATA_FETCH_IN_TESTS !== '1') {
     return {};
   }
 
   const cache: Record<string, ModelMetadata> = {};
   try {
     const res = await fetch('https://openrouter.ai/api/v1/models');
-    if (!res.ok) return cache;
+    if (!res.ok) {
+      const staleCache = shouldUseDiskCache ? readCachedMetadataCatalog(true) : null;
+      if (staleCache) {
+        metadataCache = staleCache;
+        return staleCache;
+      }
+      return cache;
+    }
     const data = (await res.json()) as {
       data: Array<{
         id: string;
         context_length?: number;
+        architecture?: { input_modalities?: string[] };
         pricing?: { prompt: string; completion: string };
       }>;
     };
@@ -86,9 +182,11 @@ export async function fetchModelMetadataCatalog(): Promise<Record<string, ModelM
       const completionRaw = parseFloat(m.pricing?.completion ?? '0');
       const promptPerM = promptRaw * 1_000_000;
       const completionPerM = completionRaw * 1_000_000;
+      const modalities = normalizeModalities(m.architecture?.input_modalities);
 
       const metadata: ModelMetadata = {
         contextLength,
+        ...(modalities ? { modalities } : {}),
         pricing: {
           prompt: formatPricePerM(promptPerM),
           completion: formatPricePerM(completionPerM),
@@ -111,8 +209,13 @@ export async function fetchModelMetadataCatalog(): Promise<Record<string, ModelM
       }
     }
     metadataCache = cache;
+    writeCachedMetadataCatalog(cache);
   } catch {
-    // Ignore fetch errors, return empty cache
+    const staleCache = shouldUseDiskCache ? readCachedMetadataCatalog(true) : null;
+    if (staleCache) {
+      metadataCache = staleCache;
+      return staleCache;
+    }
   }
   return cache;
 }

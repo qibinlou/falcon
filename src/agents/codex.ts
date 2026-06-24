@@ -46,7 +46,7 @@ export class CodexLauncher implements AgentLauncher {
 
     if (model) {
       try {
-        ensureCodexConfig(codexDir, model, baseUrl, env['OPENAI_BASE_URL']);
+        await ensureCodexConfig(codexDir, model, baseUrl, env['OPENAI_BASE_URL']);
       } catch (err) {
         console.error(
           `Warning: Failed to configure Codex: ${err instanceof Error ? err.message : err}`,
@@ -92,12 +92,12 @@ export class CodexLauncher implements AgentLauncher {
   }
 }
 
-function ensureCodexConfig(
+async function ensureCodexConfig(
   codexDir: string,
   modelName: string,
   resolvedBaseUrl?: string,
   envBaseUrl?: string,
-): string {
+): Promise<string> {
   if (!fs.existsSync(codexDir)) {
     fs.mkdirSync(codexDir, { recursive: true, mode: 0o700 });
   }
@@ -105,7 +105,7 @@ function ensureCodexConfig(
   const configPath = path.join(codexDir, 'config.toml');
   const catalogPath = path.join(codexDir, 'model.json');
 
-  writeCodexModelCatalog(catalogPath, modelName);
+  await writeCodexModelCatalog(catalogPath, modelName);
 
   let baseUrl =
     resolvedBaseUrl || envBaseUrl || process.env['OPENAI_BASE_URL'] || DEFAULT_OPENAI_BASE_URL;

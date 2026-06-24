@@ -8,6 +8,10 @@ import type { GatewayConfig } from '../gateways/index.js';
 import { CodexLauncher } from './codex.js';
 import { bifrost } from './shared/bifrost.js';
 import { ENV_CODEX_HOME, ENV_FALCON_DIR, DEFAULT_FALCON_DIR } from '../constants.js';
+import {
+  clearModelMetadataCache,
+  setLocalModelMetadataCache,
+} from '../gateways/shared/modelEnricher.js';
 
 describe('Codex Agent Launcher', () => {
   let tempDir: string;
@@ -18,9 +22,32 @@ describe('Codex Agent Launcher', () => {
     originalCodexHome = process.env[ENV_CODEX_HOME];
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-test-'));
     process.env[ENV_CODEX_HOME] = tempDir;
+    setLocalModelMetadataCache({
+      'gpt-4o': {
+        contextLength: 128000,
+        modalities: ['text', 'image'],
+        pricing: { prompt: '$2.50/1M', completion: '$10.00/1M', promptPerM: 2.5 },
+      },
+      'deepseek/deepseek-v4-flash:free': {
+        contextLength: 163840,
+        modalities: ['text'],
+        pricing: { prompt: '$0.00/1M', completion: '$0.00/1M', promptPerM: 0 },
+      },
+      'deepseek-v4-flash': {
+        contextLength: 163840,
+        modalities: ['text'],
+        pricing: { prompt: '$0.00/1M', completion: '$0.00/1M', promptPerM: 0 },
+      },
+      'claude-sonnet-4': {
+        contextLength: 200000,
+        modalities: ['text', 'image'],
+        pricing: { prompt: '$3.00/1M', completion: '$15.00/1M', promptPerM: 3 },
+      },
+    });
   });
 
   after(() => {
+    clearModelMetadataCache();
     if (originalCodexHome !== undefined) {
       process.env[ENV_CODEX_HOME] = originalCodexHome;
     } else {
@@ -91,6 +118,7 @@ describe('Codex Agent Launcher', () => {
     assert.ok(modelEntry);
     assert.strictEqual(modelEntry.display_name, 'gpt-4o');
     assert.strictEqual(modelEntry.context_window, 128000);
+    assert.deepStrictEqual(modelEntry.input_modalities, ['text', 'image']);
   });
 
   test('resolveConfig should handle custom base URL configuration when gateway is anthropic', async () => {
@@ -279,8 +307,8 @@ describe('Codex Agent Launcher', () => {
         (m: { slug: string }) => m.slug === 'deepseek/deepseek-v4-flash:free',
       );
       assert.ok(entry, 'model.json missing entry');
-      assert.ok(entry.context_window > 0, 'context_window should be positive');
-      assert.ok(entry.input_modalities.includes('text'), 'input_modalities should include text');
+      assert.strictEqual(entry.context_window, 163840);
+      assert.deepStrictEqual(entry.input_modalities, ['text']);
     });
 
     test('re-running is idempotent — no duplicate entries or sections', async () => {

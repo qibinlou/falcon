@@ -1,9 +1,13 @@
 import assert from 'node:assert';
 import { after, before, describe, test } from 'node:test';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import {
   normalizeModelId,
   enrichModelWithCatalog,
   enrichModelInfo,
+  fetchModelMetadataCatalog,
   setLocalModelMetadataCache,
   clearModelMetadataCache,
 } from './modelEnricher.js';
@@ -45,6 +49,7 @@ describe('Model Enrichment', () => {
   const mockCatalog = {
     'gpt-4o': {
       contextLength: 128000,
+      modalities: ['text', 'image'],
       pricing: {
         prompt: '$2.50/1M',
         completion: '$10.00/1M',
@@ -126,5 +131,76 @@ describe('Model Enrichment', () => {
       assert.strictEqual(enriched.contextLength, 200000);
       assert.strictEqual(enriched.pricing?.prompt, '$3.00/1M');
     });
+  });
+});
+
+describe('OpenRouter Catalog Cache', () => {
+  let tempDir: string;
+  let originalFetch: typeof global.fetch;
+  let originalCachePath: string | undefined;
+  let originalAllowFetch: string | undefined;
+
+  before(() => {
+    originalFetch = global.fetch;
+    originalCachePath = process.env.FALCON_MODEL_METADATA_CACHE_PATH;
+    originalAllowFetch = process.env.FALCON_ALLOW_MODEL_METADATA_FETCH_IN_TESTS;
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-model-cache-'));
+    process.env.FALCON_MODEL_METADATA_CACHE_PATH = path.join(tempDir, 'openrouter-models.json');
+    process.env.FALCON_ALLOW_MODEL_METADATA_FETCH_IN_TESTS = '1';
+  });
+
+  after(() => {
+    global.fetch = originalFetch;
+    clearModelMetadataCache();
+    if (originalCachePath !== undefined) {
+      process.env.FALCON_MODEL_METADATA_CACHE_PATH = originalCachePath;
+    } else {
+      delete process.env.FALCON_MODEL_METADATA_CACHE_PATH;
+    }
+    if (originalAllowFetch !== undefined) {
+      process.env.FALCON_ALLOW_MODEL_METADATA_FETCH_IN_TESTS = originalAllowFetch;
+    } else {
+      delete process.env.FALCON_ALLOW_MODEL_METADATA_FETCH_IN_TESTS;
+    }
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('fetchModelMetadataCatalog parses context and modalities and reuses disk cache', async () => {
+    let fetchCalls = 0;
+    global.fetch = async (url: RequestInfo | URL) => {
+      fetchCalls += 1;
+      assert.strictEqual(url, 'https://openrouter.ai/api/v1/models');
+      return {
+        ok: true,
+        json: async () => ({
+          data: [
+            {
+              id: 'openai/gpt-4o',
+              context_length: 123456,
+              architecture: { input_modalities: ['text', 'image', 'text'] },
+              pricing: { prompt: '0.0000025', completion: '0.00001' },
+            },
+          ],
+        }),
+      } as unknown as Response;
+    };
+
+    clearModelMetadataCache();
+    const firstCatalog = await fetchModelMetadataCatalog();
+    assert.strictEqual(firstCatalog['openai/gpt-4o']?.contextLength, 123456);
+    assert.deepStrictEqual(firstCatalog['gpt-4o']?.modalities, ['text', 'image']);
+    assert.strictEqual(fetchCalls, 1);
+
+    clearModelMetadataCache();
+    global.fetch = async () => {
+      throw new Error('fresh disk cache should avoid remote fetch');
+    };
+
+    const secondCatalog = await fetchModelMetadataCatalog();
+    assert.strictEqual(secondCatalog['gpt-4o']?.contextLength, 123456);
+    assert.deepStrictEqual(secondCatalog['gpt-4o']?.modalities, ['text', 'image']);
+    assert.strictEqual(fetchCalls, 1);
   });
 });
