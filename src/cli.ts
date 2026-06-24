@@ -219,7 +219,12 @@ async function handleLaunch(
       console.debug(`DEBUG: [CLI] Resolved Config:`, maskResolvedConfig(resolvedConfig));
     }
 
+    const isDetached = spawnConfig.detached === true;
+
     const cleanUp = () => {
+      // In detached mode, we don't clean up resources that the background process
+      // still needs (like the bifrost proxy or temp folders) upon a normal exit.
+      if (isDetached) return;
       if (spawnConfig.cleanup) {
         try {
           spawnConfig.cleanup();
@@ -237,21 +242,40 @@ async function handleLaunch(
     process.on('exit', cleanUp);
 
     const proc = spawn(spawnConfig.command, spawnConfig.args, {
-      stdio: 'inherit',
+      stdio: isDetached ? 'ignore' : 'inherit',
+      detached: isDetached,
       env: { ...process.env, ...gatewayEnv, ...spawnConfig.env },
     });
 
-    if (spawnConfig.afterSpawn) {
-      void Promise.resolve(spawnConfig.afterSpawn(proc)).catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err);
-        console.error(chalk.yellow(`Warning: post-launch hook failed: ${message}`));
-      });
+    if (isDetached) {
+      proc.unref();
+
+      if (spawnConfig.afterSpawn) {
+        try {
+          await spawnConfig.afterSpawn(proc);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error(chalk.yellow(`Warning: post-launch hook failed: ${message}`));
+        }
+      }
+
+      console.log(
+        chalk.green(`\n🚀 ${agent.name} launched in detached background mode (PID: ${proc.pid}).`),
+      );
+      console.log(chalk.cyan(`To terminate/kill the process, run:\n  kill ${proc.pid}\n`));
+
+      // Exit the CLI process cleanly now that launch is completed
+      process.exit(0);
     }
 
     proc.on('error', (err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);
       console.error(chalk.red(`Failed to launch ${agent.name}: ${message}`));
-      cleanUp();
+      if (spawnConfig.cleanup) {
+        try {
+          spawnConfig.cleanup();
+        } catch (_) {}
+      }
       process.exit(1);
     });
 

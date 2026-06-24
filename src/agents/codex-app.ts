@@ -123,6 +123,7 @@ export class CodexAppLauncher implements AgentLauncher {
         CODEX_ELECTRON_USER_DATA_PATH: electronUserDataDir,
       },
       cleanup: resolvedConfig.cleanup,
+      detached: true,
       afterSpawn:
         Number.isFinite(debugPort) && debugPort > 0
           ? (proc) =>

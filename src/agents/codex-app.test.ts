@@ -150,6 +150,7 @@ describe('Codex App (Desktop) Launcher', () => {
     ]);
     assert.strictEqual(spawnConfig.env['CODEX_ELECTRON_USER_DATA_PATH'], expectedElectronDir);
     assert.ok(spawnConfig.afterSpawn);
+    assert.strictEqual(spawnConfig.detached, true);
 
     // The Electron binary ignores Codex's own CLI flags — none should be passed.
     assert.ok(!spawnConfig.args.includes('--profile'));

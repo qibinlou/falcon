@@ -63,7 +63,7 @@ export async function patchCodexAppModelLabelAfterSpawn(
   const modelNames = Array.from(new Set([modelName, ...(allCatalogModels ?? [])].filter(Boolean)));
 
   try {
-    const client = await connectToCodexAppPage(debugPort);
+    const client = await connectToCodexAppPage(proc, debugPort);
     try {
       await client.send('Runtime.enable');
       await client.send('Page.enable');
@@ -89,11 +89,14 @@ export async function patchCodexAppModelLabelAfterSpawn(
   }
 }
 
-async function connectToCodexAppPage(debugPort: number): Promise<CdpClient> {
+async function connectToCodexAppPage(proc: ChildProcess, debugPort: number): Promise<CdpClient> {
   const startedAt = Date.now();
   let lastError: unknown;
 
   while (Date.now() - startedAt < DEFAULT_BOOTSTRAP_TIMEOUT_MS) {
+    if (proc.exitCode !== null || proc.killed) {
+      throw new Error('Process exited while waiting for debugger connection');
+    }
     try {
       const wsUrl = await getCodexAppPageWebSocketUrl(debugPort);
       if (wsUrl) {
