@@ -36,6 +36,11 @@ function fallbackModalities(modelName: string): string[] {
   return modalities;
 }
 
+function cleanModalities(rawModalities: string[]): string[] {
+  const filtered = rawModalities.filter((m) => m === 'text' || m === 'image');
+  return filtered.length > 0 ? filtered : ['text'];
+}
+
 function findModelMetadata(
   catalog: Record<string, ModelMetadata>,
   modelName: string,
@@ -54,7 +59,7 @@ export async function getContextWindow(modelName: string): Promise<number> {
 export async function getModalities(modelName: string): Promise<string[]> {
   const catalog = await fetchModelMetadataCatalog();
   const metadata = findModelMetadata(catalog, modelName);
-  return metadata?.modalities ?? fallbackModalities(modelName);
+  return cleanModalities(metadata?.modalities ?? fallbackModalities(modelName));
 }
 
 export async function writeCodexModelCatalog(
@@ -77,7 +82,7 @@ export async function writeCodexModelCatalog(
   const catalogMetadata = await fetchModelMetadataCatalog();
   const metadata = findModelMetadata(catalogMetadata, modelName);
   const contextWindow = metadata?.contextLength || fallbackContextWindow(modelName);
-  const modalities = metadata?.modalities ?? fallbackModalities(modelName);
+  const modalities = cleanModalities(metadata?.modalities ?? fallbackModalities(modelName));
   const truncationMode = modelName.includes('/') ? 'tokens' : 'bytes';
 
   const entry = {
