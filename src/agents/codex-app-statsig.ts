@@ -45,6 +45,7 @@ export async function patchCodexAppModelLabelAfterSpawn(
   proc: ChildProcess,
   debugPort: number,
   modelName: string,
+  allCatalogModels?: string[],
 ): Promise<void> {
   if (!modelName || !Number.isFinite(debugPort) || debugPort <= 0) {
     return;
@@ -54,13 +55,17 @@ export async function patchCodexAppModelLabelAfterSpawn(
     return;
   }
 
+  // Collect all model names to patch into the allow-list.  The launched model
+  // is always included; additional catalog models let the user switch freely.
+  const modelNames = Array.from(new Set([modelName, ...(allCatalogModels ?? [])].filter(Boolean)));
+
   try {
     const client = await connectToCodexAppPage(debugPort);
     try {
       await client.send('Runtime.enable');
       await client.send('Page.enable');
 
-      const patched = await waitForStatsigCachePatch(client, modelName);
+      const patched = await waitForStatsigCachePatch(client, modelNames);
       if (!patched.ok) {
         return;
       }
@@ -68,7 +73,7 @@ export async function patchCodexAppModelLabelAfterSpawn(
       await client.send('Page.reload', { ignoreCache: true });
       const visible = await waitForExpectedModelLabel(client, modelName);
       if (!visible.hasExpectedLabel) {
-        await waitForStatsigCachePatch(client, modelName);
+        await waitForStatsigCachePatch(client, modelNames);
         await client.send('Page.reload', { ignoreCache: true });
         await waitForExpectedModelLabel(client, modelName);
       }
@@ -160,13 +165,13 @@ function connectCdp(wsUrl: string): Promise<CdpClient> {
 
 async function waitForStatsigCachePatch(
   client: CdpClient,
-  modelName: string,
+  modelNames: string[],
 ): Promise<PatchResult> {
   const startedAt = Date.now();
   let result: PatchResult = { ok: false, reason: 'not_started' };
 
   while (Date.now() - startedAt < DEFAULT_BOOTSTRAP_TIMEOUT_MS) {
-    result = await patchStatsigCache(client, modelName);
+    result = await patchStatsigCache(client, modelNames);
     if (result.ok) {
       return result;
     }
@@ -176,12 +181,12 @@ async function waitForStatsigCachePatch(
   return result;
 }
 
-async function patchStatsigCache(client: CdpClient, modelName: string): Promise<PatchResult> {
+async function patchStatsigCache(client: CdpClient, modelNames: string[]): Promise<PatchResult> {
   const response = await client.send('Runtime.evaluate', {
     expression: `(${patchStatsigCacheInRenderer.toString()})(${JSON.stringify({
       cachePrefix: STATSIG_CACHE_PREFIX,
       configId: STATSIG_MODEL_LIST_CONFIG_ID,
-      modelName,
+      modelNames,
     })})`,
     returnByValue: true,
   });
@@ -201,11 +206,11 @@ async function patchStatsigCache(client: CdpClient, modelName: string): Promise<
 function patchStatsigCacheInRenderer({
   cachePrefix,
   configId,
-  modelName,
+  modelNames,
 }: {
   cachePrefix: string;
   configId: string;
-  modelName: string;
+  modelNames: string[];
 }): PatchResult {
   const key = Object.keys(localStorage).find((candidate) => candidate.startsWith(cachePrefix));
   if (!key) {
@@ -223,8 +228,8 @@ function patchStatsigCacheInRenderer({
     const availableModels = Array.isArray(config.value.available_models)
       ? config.value.available_models
       : [];
-    const alreadyAllowed = availableModels.includes(modelName);
-    config.value.available_models = Array.from(new Set([...availableModels, modelName]));
+    const alreadyAllowed = modelNames.every((m) => availableModels.includes(m));
+    config.value.available_models = Array.from(new Set([...availableModels, ...modelNames]));
     config.value.use_hidden_models = true;
     outer.data = JSON.stringify(data);
     outer.source = 'FalconLocalOverride';
