@@ -24,7 +24,7 @@
     "falcon": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsup src/cli.ts --format esm --target node22 --clean && node -e \"const fs=require('fs');const f='dist/cli.js';fs.writeFileSync(f,'#!/usr/bin/env node\\n'+fs.readFileSync(f));\" && chmod +x dist/cli.js",
+    "build": "tsup src/cli.ts --format esm --target node --clean && node -e \"const fs=require('fs');const f='dist/cli.js';fs.writeFileSync(f,'#!/usr/bin/env node\\n'+fs.readFileSync(f));\" && chmod +x dist/cli.js",
     "dev": "tsx src/cli.ts",
     "start": "node dist/cli.js",
     "test": "tsx --test \"src/**/*.test.ts\"",
