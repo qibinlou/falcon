@@ -5,7 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import type { GatewayConfig } from '../gateways/index.js';
-import { CodexAppLauncher } from './codex-app.js';
+import { CodexAppLauncher, readCatalogModelSlugs } from './codex-app.js';
 import { bifrost } from './shared/bifrost.js';
 import { ENV_CODEX_HOME, ENV_FALCON_DIR } from '../constants.js';
 import {
@@ -265,5 +265,66 @@ describe('Codex App (Desktop) Launcher', () => {
     const slugs = catalog.models.map((m: { slug: string }) => m.slug);
     assert.ok(slugs.includes('model-a'));
     assert.ok(slugs.includes('model-b'));
+  });
+
+  describe('readCatalogModelSlugs', () => {
+    test('should return empty array if file does not exist', () => {
+      const nonExistentPath = path.join(codexAppDir, 'non-existent-model.json');
+      const result = readCatalogModelSlugs(nonExistentPath);
+      assert.deepStrictEqual(result, []);
+    });
+
+    test('should return empty array if file content is invalid JSON', () => {
+      const invalidPath = path.join(codexAppDir, 'invalid-model.json');
+      fs.writeFileSync(invalidPath, '{invalid', 'utf8');
+      try {
+        const result = readCatalogModelSlugs(invalidPath);
+        assert.deepStrictEqual(result, []);
+      } finally {
+        fs.rmSync(invalidPath, { force: true });
+      }
+    });
+
+    test('should return list of slugs from a valid model.json', () => {
+      const validPath = path.join(codexAppDir, 'temp-model.json');
+      const catalogData = {
+        models: [
+          { slug: 'model-1', display_name: 'Model 1' },
+          { slug: 'model-2', display_name: 'Model 2' },
+          { display_name: 'Unnamed' },
+        ],
+      };
+      fs.writeFileSync(validPath, JSON.stringify(catalogData), 'utf8');
+      try {
+        const result = readCatalogModelSlugs(validPath);
+        assert.deepStrictEqual(result, ['model-1', 'model-2']);
+      } finally {
+        fs.rmSync(validPath, { force: true });
+      }
+    });
+  });
+
+  test('buildSpawnConfig reads all model slugs from model.json to pass to patch', async () => {
+    const config: GatewayConfig = {
+      env: {
+        OPENAI_API_KEY: 'sk-openai-key',
+        OPENAI_BASE_URL: 'https://api.openai.com/v1',
+      },
+      baseUrl: 'https://api.openai.com/v1',
+    };
+
+    // First resolve two models to populate the catalog model.json
+    await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'model-1');
+    const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'model-2');
+
+    // Run buildSpawnConfig
+    const spawnConfig = launcher.buildSpawnConfig(resolved, 'model-2', []);
+    assert.ok(spawnConfig.afterSpawn, 'afterSpawn hook should be present');
+
+    // Read the catalog to double check they exist
+    const catalogPath = path.join(codexAppDir, 'model.json');
+    const slugs = readCatalogModelSlugs(catalogPath);
+    assert.ok(slugs.includes('model-1'), 'catalog should contain model-1');
+    assert.ok(slugs.includes('model-2'), 'catalog should contain model-2');
   });
 });

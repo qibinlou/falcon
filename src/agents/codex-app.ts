@@ -109,6 +109,10 @@ export class CodexAppLauncher implements AgentLauncher {
         ? ['--remote-debugging-address=127.0.0.1', `--remote-debugging-port=${debugPort}`]
         : [];
 
+    // Read all catalog model slugs so every model in model.json is patched into
+    // the Statsig allow-list, enabling switching between models in the Desktop UI.
+    const allCatalogModels = readCatalogModelSlugs(path.join(codexDir, 'model.json'));
+
     // A dedicated `--user-data-dir` defeats Electron's single-instance lock so a
     // new window opens even while the primary Codex app is running.
     return {
@@ -121,7 +125,7 @@ export class CodexAppLauncher implements AgentLauncher {
       cleanup: resolvedConfig.cleanup,
       afterSpawn:
         Number.isFinite(debugPort) && debugPort > 0
-          ? (proc) => patchCodexAppModelLabelAfterSpawn(proc, debugPort, _model)
+          ? (proc) => patchCodexAppModelLabelAfterSpawn(proc, debugPort, _model, allCatalogModels)
           : undefined,
     };
   }
@@ -210,4 +214,22 @@ async function ensureCodexAppConfig(
   text = upsertSection(text, `[feedback]`, [`enabled = false`]);
 
   fs.writeFileSync(configPath, text, 'utf8');
+}
+
+export function readCatalogModelSlugs(catalogPath: string): string[] {
+  if (!fs.existsSync(catalogPath)) {
+    return [];
+  }
+  try {
+    const data = fs.readFileSync(catalogPath, 'utf8');
+    const parsed = JSON.parse(data);
+    if (parsed && Array.isArray(parsed.models)) {
+      return parsed.models
+        .map((m: { slug?: string }) => m.slug)
+        .filter((slug: unknown): slug is string => typeof slug === 'string');
+    }
+  } catch (_e) {
+    // Ignore read or parse error
+  }
+  return [];
 }
