@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import chalk from 'chalk';
 import { Box, render, Text, useApp } from 'ink';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { AgentLauncher, ResolvedConfig } from '../agents/index.js';
@@ -96,7 +97,7 @@ function App({ agent, preselectedModel, preselectedGateway, extraArgs }: AppProp
       setTimeout(() => {
         exit();
 
-        setTimeout(() => {
+        setTimeout(async () => {
           process.off('SIGINT', handleSignalDuringLaunch);
           process.off('SIGTERM', handleSignalDuringLaunch);
 
@@ -104,14 +105,38 @@ function App({ agent, preselectedModel, preselectedGateway, extraArgs }: AppProp
           process.on('SIGINT', ignoreSignal);
           process.on('SIGTERM', ignoreSignal);
 
+          const isDetached = spawnConfig.detached === true;
+
           const proc = spawn(spawnConfig.command, spawnConfig.args, {
-            stdio: 'inherit',
+            stdio: isDetached ? 'ignore' : 'inherit',
+            detached: isDetached,
             env: { ...process.env, ...gateway.fields, ...spawnConfig.env },
           });
 
+          if (isDetached) {
+            proc.unref();
+
+            if (spawnConfig.afterSpawn) {
+              try {
+                await spawnConfig.afterSpawn(proc);
+              } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : String(err);
+                console.error(chalk.yellow(`Warning: post-launch hook failed: ${message}`));
+              }
+            }
+
+            console.log(
+              chalk.green(
+                `\n🚀 ${agent.name} launched in detached background mode (PID: ${proc.pid}).`,
+              ),
+            );
+            console.log(chalk.cyan(`To terminate/kill the process, run:\n  kill ${proc.pid}\n`));
+            process.exit(0);
+          }
+
           proc.on('error', (err: unknown) => {
             const message = err instanceof Error ? err.message : String(err);
-            console.error(`\x1b[31mFailed to launch ${agent.name}: ${message}\x1b[0m`);
+            console.error(chalk.red(`Failed to launch ${agent.name}: ${message}`));
             process.off('SIGINT', ignoreSignal);
             process.off('SIGTERM', ignoreSignal);
             cleanUp();

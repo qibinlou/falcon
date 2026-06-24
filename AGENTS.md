@@ -175,7 +175,11 @@ pnpm add -g .
 
 
 ## Agentic Workflow Rules
-- Use TDD as your primary development approach to ensure the tests are effective and always up to date with the latest business logics. Follow the cycle of test -> implement -> test -> refactor.
+- **CRITICAL**: Use TDD as your primary development approach. You MUST write or update a test demonstrating the failure BEFORE modifying implementation files. No logic/implementation changes are permitted without a corresponding new/updated test (unit or E2E).
+- **Testing UI/Interactive Flows**: If a change involves interactive UI (like React Ink / TUI), and unit testing the UI wrapper is too complex:
+  1. Refactor/extract the underlying non-UI logic into a helper function and unit test that helper.
+  2. Or, add an E2E test that drives the CLI interactively using mock stdin inputs.
+  3. Never skip writing tests under the assumption that "UI code is too hard to test."
 - Don't run `pnpm run build` or `pnpm run dev` unless explicitly asked.
 - Don't run lint/types/format tasks in the middle of your work; only run them before wrapping up and handing over back to the user. Run `pnpm run check:all` to run all checks in one go to save time and tokens.
 - I haven't release the software to public yet, so it's safe to make breaking changes if needed.
