@@ -24,6 +24,11 @@ describe('Codex model metadata helpers', () => {
         modalities: ['text'],
         pricing: { prompt: '$0.00/1M', completion: '$0.00/1M', promptPerM: 0 },
       },
+      'google/gemma-4-31b-it:free': {
+        contextLength: 1000000,
+        modalities: ['text', 'image', 'audio', 'video'],
+        pricing: { prompt: '$0.00/1M', completion: '$0.00/1M', promptPerM: 0 },
+      },
     });
   });
 
@@ -37,5 +42,9 @@ describe('Codex model metadata helpers', () => {
 
   test('getModalities uses OpenRouter catalog metadata for normalized model ids', async () => {
     assert.deepStrictEqual(await getModalities('openai/gpt-4o'), ['text', 'image']);
+  });
+
+  test('getModalities filters out unsupported modalities like video or audio', async () => {
+    assert.deepStrictEqual(await getModalities('google/gemma-4-31b-it:free'), ['text', 'image']);
   });
 });

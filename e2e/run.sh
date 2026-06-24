@@ -23,6 +23,7 @@ SUITES=(
   "e2e/02-gateway-detect.test.ts"
   "e2e/04-models.test.ts"
   "e2e/05-interactive-install.test.ts"
+  "e2e/06-codex-modalities.test.ts"
 )
 
 SUITE_LABELS=(
@@ -30,6 +31,7 @@ SUITE_LABELS=(
   "02 · Gateway Detection"
   "04 · Models API (live)"
   "05 · Interactive Install"
+  "06 · Codex Modalities"
 )
 
 # ── Load .env if present ──────────────────────────────────────────────────────
