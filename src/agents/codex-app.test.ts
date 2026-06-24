@@ -8,6 +8,10 @@ import type { GatewayConfig } from '../gateways/index.js';
 import { CodexAppLauncher } from './codex-app.js';
 import { bifrost } from './shared/bifrost.js';
 import { ENV_CODEX_HOME, ENV_FALCON_DIR } from '../constants.js';
+import {
+  clearModelMetadataCache,
+  setLocalModelMetadataCache,
+} from '../gateways/shared/modelEnricher.js';
 
 describe('Codex App (Desktop) Launcher', () => {
   let falconDir: string;
@@ -25,9 +29,22 @@ describe('Codex App (Desktop) Launcher', () => {
     // live under FALCON_DIR/codex-app to stay isolated from the user's ~/.codex.
     delete process.env[ENV_CODEX_HOME];
     codexAppDir = path.join(falconDir, 'codex-app');
+    setLocalModelMetadataCache({
+      'deepseek/deepseek-v4': {
+        contextLength: 163840,
+        modalities: ['text'],
+        pricing: { prompt: '$0.27/1M', completion: '$1.10/1M', promptPerM: 0.27 },
+      },
+      'gpt-4o': {
+        contextLength: 128000,
+        modalities: ['text', 'image'],
+        pricing: { prompt: '$2.50/1M', completion: '$10.00/1M', promptPerM: 2.5 },
+      },
+    });
   });
 
   after(() => {
+    clearModelMetadataCache();
     if (originalFalconDir !== undefined) {
       process.env[ENV_FALCON_DIR] = originalFalconDir;
     } else {
@@ -102,7 +119,8 @@ describe('Codex App (Desktop) Launcher', () => {
     const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
     const entry = catalog.models.find((m: { slug: string }) => m.slug === 'deepseek/deepseek-v4');
     assert.ok(entry, 'catalog should contain the model');
-    assert.ok(entry.context_window > 0);
+    assert.strictEqual(entry.context_window, 163840);
+    assert.deepStrictEqual(entry.input_modalities, ['text']);
   });
 
   test('buildSpawnConfig launches the desktop Electron binary with --user-data-dir', async () => {
