@@ -14,6 +14,7 @@ export interface SpawnConfig {
   env: Record<string, string>;
   cleanup?: () => void;
   afterSpawn?: (proc: ChildProcess) => void | Promise<void>;
+  detached?: boolean;
 }
 
 export interface AgentLauncher {
