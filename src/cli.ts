@@ -31,6 +31,23 @@ const __dirname = dirname(__filename);
 const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8'));
 const VERSION = packageJson.version;
 
+const SENSITIVE_ENV_RE = /(api|auth|key|token|secret|password|credential)/i;
+
+function maskResolvedConfig(config: ResolvedConfig): Omit<ResolvedConfig, 'cleanup'> & {
+  cleanup?: boolean;
+} {
+  return {
+    ...config,
+    env: Object.fromEntries(
+      Object.entries(config.env).map(([key, value]) => [
+        key,
+        SENSITIVE_ENV_RE.test(key) ? maskString(value) : value,
+      ]),
+    ),
+    cleanup: config.cleanup ? true : undefined,
+  };
+}
+
 const program = new Command()
   .name('falcon')
   .version(VERSION)
@@ -198,7 +215,9 @@ async function handleLaunch(
       return agent.buildSpawnConfig(resolvedConfig, model, extraArgs);
     });
 
-    console.debug(`DEBUG: [CLI] Resolved Config:`, resolvedConfig);
+    if (process.env['FALCON_DEBUG'] === 'true') {
+      console.debug(`DEBUG: [CLI] Resolved Config:`, maskResolvedConfig(resolvedConfig));
+    }
 
     const cleanUp = () => {
       if (spawnConfig.cleanup) {
@@ -221,6 +240,13 @@ async function handleLaunch(
       stdio: 'inherit',
       env: { ...process.env, ...gatewayEnv, ...spawnConfig.env },
     });
+
+    if (spawnConfig.afterSpawn) {
+      void Promise.resolve(spawnConfig.afterSpawn(proc)).catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(chalk.yellow(`Warning: post-launch hook failed: ${message}`));
+      });
+    }
 
     proc.on('error', (err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);

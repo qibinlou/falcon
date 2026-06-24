@@ -15,8 +15,14 @@ import {
   upsertSection,
   upsertTopLevelKey,
 } from './codex-utils.js';
+import {
+  buildCodexAppModelDisplayName,
+  patchCodexAppModelLabelAfterSpawn,
+} from './codex-app-statsig.js';
+import { getFreePort } from '../utils.js';
 
 const DEFAULT_CODEX_DESKTOP_PATH = '/Applications/Codex.app/Contents/MacOS/Codex';
+const ENV_FALCON_CODEX_APP_DEBUG_PORT = 'FALCON_CODEX_APP_DEBUG_PORT';
 
 /**
  * Launches the Codex **desktop app** (the Electron build) configured against a
@@ -59,6 +65,7 @@ export class CodexAppLauncher implements AgentLauncher {
 
     const codexDir = this.getCodexAppDir();
     env[ENV_CODEX_HOME] = codexDir;
+    env[ENV_FALCON_CODEX_APP_DEBUG_PORT] = String(await getFreePort());
 
     // Persist API-key auth so the desktop app authenticates against the gateway
     // out of the box instead of falling back to the ChatGPT subscription login.
@@ -94,17 +101,28 @@ export class CodexAppLauncher implements AgentLauncher {
     const codexDir = this.getCodexAppDir();
     const electronUserDataDir = path.join(codexDir, 'electron-user-data');
     const desktopBinary = process.env['CODEX_DESKTOP_PATH'] || DEFAULT_CODEX_DESKTOP_PATH;
+    const requestedDebugPort = getRemoteDebuggingPort(extraArgs);
+    const debugPort =
+      requestedDebugPort ?? Number(resolvedConfig.env[ENV_FALCON_CODEX_APP_DEBUG_PORT]);
+    const debugArgs =
+      requestedDebugPort == null && Number.isFinite(debugPort)
+        ? ['--remote-debugging-address=127.0.0.1', `--remote-debugging-port=${debugPort}`]
+        : [];
 
     // A dedicated `--user-data-dir` defeats Electron's single-instance lock so a
     // new window opens even while the primary Codex app is running.
     return {
       command: desktopBinary,
-      args: [`--user-data-dir=${electronUserDataDir}`, ...extraArgs],
+      args: [`--user-data-dir=${electronUserDataDir}`, ...debugArgs, ...extraArgs],
       env: {
         ...resolvedConfig.env,
         CODEX_ELECTRON_USER_DATA_PATH: electronUserDataDir,
       },
       cleanup: resolvedConfig.cleanup,
+      afterSpawn:
+        Number.isFinite(debugPort) && debugPort > 0
+          ? (proc) => patchCodexAppModelLabelAfterSpawn(proc, debugPort, _model)
+          : undefined,
     };
   }
 
@@ -112,6 +130,16 @@ export class CodexAppLauncher implements AgentLauncher {
     const falconDir = process.env[ENV_FALCON_DIR] || DEFAULT_FALCON_DIR;
     return path.join(falconDir, this.slug);
   }
+}
+
+function getRemoteDebuggingPort(args: string[]): number | undefined {
+  const portArg = args.find((arg) => arg.startsWith('--remote-debugging-port='));
+  if (!portArg) {
+    return undefined;
+  }
+
+  const port = Number(portArg.split('=')[1]);
+  return Number.isFinite(port) && port > 0 ? port : undefined;
 }
 
 /**
@@ -146,7 +174,9 @@ async function ensureCodexAppConfig(
   const configPath = path.join(codexDir, 'config.toml');
   const catalogPath = path.join(codexDir, 'model.json');
 
-  await writeCodexModelCatalog(catalogPath, modelName);
+  await writeCodexModelCatalog(catalogPath, modelName, {
+    displayName: buildCodexAppModelDisplayName(modelName),
+  });
 
   let baseUrl =
     resolvedBaseUrl || envBaseUrl || process.env['OPENAI_BASE_URL'] || DEFAULT_OPENAI_BASE_URL;

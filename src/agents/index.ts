@@ -1,3 +1,4 @@
+import type { ChildProcess } from 'child_process';
 import type { GatewayConfig } from '../gateways/index.js';
 
 export interface ResolvedConfig {
@@ -11,6 +12,7 @@ export interface SpawnConfig {
   args: string[];
   env: Record<string, string>;
   cleanup?: () => void;
+  afterSpawn?: (proc: ChildProcess) => void | Promise<void>;
 }
 
 export interface AgentLauncher {
