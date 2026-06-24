@@ -77,6 +77,7 @@ describe('Codex App (Desktop) Launcher', () => {
     assert.strictEqual(resolved.env[ENV_CODEX_HOME], codexAppDir);
     assert.strictEqual(resolved.env['OPENAI_BASE_URL'], 'https://api.openai.com/v1');
     assert.strictEqual(resolved.env['OPENAI_API_KEY'], 'sk-openai-key');
+    assert.ok(Number(resolved.env['FALCON_CODEX_APP_DEBUG_PORT']) > 0);
   });
 
   test('resolveConfig writes model.json, top-level config.toml selection, and auth.json', async () => {
@@ -117,8 +118,11 @@ describe('Codex App (Desktop) Launcher', () => {
 
     // model.json catalog entry.
     const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
-    const entry = catalog.models.find((m: { slug: string }) => m.slug === 'deepseek/deepseek-v4');
+    const entry = catalog.models.find(
+      (m: { slug: string; display_name: string }) => m.slug === 'deepseek/deepseek-v4',
+    );
     assert.ok(entry, 'catalog should contain the model');
+    assert.strictEqual(entry.display_name, 'npm deepseek/deepseek-v4');
     assert.strictEqual(entry.context_window, 163840);
     assert.deepStrictEqual(entry.input_modalities, ['text']);
   });
@@ -139,8 +143,13 @@ describe('Codex App (Desktop) Launcher', () => {
     assert.strictEqual(spawnConfig.command, expectedBinary);
 
     const expectedElectronDir = path.join(codexAppDir, 'electron-user-data');
-    assert.deepStrictEqual(spawnConfig.args, [`--user-data-dir=${expectedElectronDir}`]);
+    assert.deepStrictEqual(spawnConfig.args, [
+      `--user-data-dir=${expectedElectronDir}`,
+      '--remote-debugging-address=127.0.0.1',
+      `--remote-debugging-port=${resolved.env['FALCON_CODEX_APP_DEBUG_PORT']}`,
+    ]);
     assert.strictEqual(spawnConfig.env['CODEX_ELECTRON_USER_DATA_PATH'], expectedElectronDir);
+    assert.ok(spawnConfig.afterSpawn);
 
     // The Electron binary ignores Codex's own CLI flags — none should be passed.
     assert.ok(!spawnConfig.args.includes('--profile'));
@@ -156,8 +165,27 @@ describe('Codex App (Desktop) Launcher', () => {
     const expectedElectronDir = path.join(codexAppDir, 'electron-user-data');
     assert.deepStrictEqual(spawnConfig.args, [
       `--user-data-dir=${expectedElectronDir}`,
+      '--remote-debugging-address=127.0.0.1',
+      `--remote-debugging-port=${resolved.env['FALCON_CODEX_APP_DEBUG_PORT']}`,
       '/path/to/workspace',
     ]);
+  });
+
+  test('buildSpawnConfig reuses caller-provided remote debugging port', async () => {
+    const config: GatewayConfig = { env: {}, baseUrl: 'https://api.openai.com/v1' };
+    const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'gpt-4o');
+    const spawnConfig = launcher.buildSpawnConfig(resolved, 'gpt-4o', [
+      '--remote-debugging-port=9444',
+      '/path/to/workspace',
+    ]);
+
+    const expectedElectronDir = path.join(codexAppDir, 'electron-user-data');
+    assert.deepStrictEqual(spawnConfig.args, [
+      `--user-data-dir=${expectedElectronDir}`,
+      '--remote-debugging-port=9444',
+      '/path/to/workspace',
+    ]);
+    assert.ok(spawnConfig.afterSpawn);
   });
 
   test('buildSpawnConfig honors CODEX_DESKTOP_PATH override', async () => {

@@ -65,6 +65,7 @@ export async function getModalities(modelName: string): Promise<string[]> {
 export async function writeCodexModelCatalog(
   catalogPath: string,
   modelName: string,
+  options: { displayName?: string } = {},
 ): Promise<void> {
   let catalog: { models: { slug: string; [key: string]: unknown }[] } = { models: [] };
   if (fs.existsSync(catalogPath)) {
@@ -87,7 +88,7 @@ export async function writeCodexModelCatalog(
 
   const entry = {
     slug: modelName,
-    display_name: modelName,
+    display_name: options.displayName ?? modelName,
     context_window: contextWindow,
     shell_type: 'default',
     visibility: 'list',
