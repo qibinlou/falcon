@@ -21,7 +21,7 @@ import {
 } from './codex-app-statsig.js';
 import { getFreePort } from '../utils.js';
 
-const DEFAULT_CODEX_DESKTOP_PATH = '/Applications/Codex.app/Contents/MacOS/Codex';
+const DEFAULT_CODEX_DESKTOP_PATH = '/Applications/ChatGPT.app/Contents/MacOS/ChatGPT';
 const ENV_FALCON_CODEX_APP_DEBUG_PORT = 'FALCON_CODEX_APP_DEBUG_PORT';
 
 /**
@@ -100,7 +100,10 @@ export class CodexAppLauncher implements AgentLauncher {
   ): SpawnConfig {
     const codexDir = this.getCodexAppDir();
     const electronUserDataDir = path.join(codexDir, 'electron-user-data');
-    const desktopBinary = process.env['CODEX_DESKTOP_PATH'] || DEFAULT_CODEX_DESKTOP_PATH;
+    const desktopBinary =
+      process.env['CHATGPT_DESKTOP_PATH'] ||
+      process.env['CODEX_DESKTOP_PATH'] ||
+      DEFAULT_CODEX_DESKTOP_PATH;
     const requestedDebugPort = getRemoteDebuggingPort(extraArgs);
     const debugPort =
       requestedDebugPort ?? Number(resolvedConfig.env[ENV_FALCON_CODEX_APP_DEBUG_PORT]);
@@ -120,6 +123,7 @@ export class CodexAppLauncher implements AgentLauncher {
       args: [`--user-data-dir=${electronUserDataDir}`, ...debugArgs, ...extraArgs],
       env: {
         ...resolvedConfig.env,
+        CHATGPT_ELECTRON_USER_DATA_PATH: electronUserDataDir,
         CODEX_ELECTRON_USER_DATA_PATH: electronUserDataDir,
       },
       cleanup: resolvedConfig.cleanup,

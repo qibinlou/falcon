@@ -37,6 +37,7 @@ describe('Codex Desktop App Multi-Model E2E', () => {
       FALCON_DIR: tempDir,
       FALCON_CONFIG_FILE: configPath,
       OPENROUTER_API_KEY: 'sk-or-mock-key-for-e2e-app-test',
+      CHATGPT_DESKTOP_PATH: mockBinPath,
       CODEX_DESKTOP_PATH: mockBinPath,
     };
 

@@ -139,7 +139,9 @@ describe('Codex App (Desktop) Launcher', () => {
     const spawnConfig = launcher.buildSpawnConfig(resolved, 'gpt-4o', []);
 
     const expectedBinary =
-      process.env['CODEX_DESKTOP_PATH'] || '/Applications/Codex.app/Contents/MacOS/Codex';
+      process.env['CHATGPT_DESKTOP_PATH'] ||
+      process.env['CODEX_DESKTOP_PATH'] ||
+      '/Applications/ChatGPT.app/Contents/MacOS/ChatGPT';
     assert.strictEqual(spawnConfig.command, expectedBinary);
 
     const expectedElectronDir = path.join(codexAppDir, 'electron-user-data');
@@ -148,6 +150,7 @@ describe('Codex App (Desktop) Launcher', () => {
       '--remote-debugging-address=127.0.0.1',
       `--remote-debugging-port=${resolved.env['FALCON_CODEX_APP_DEBUG_PORT']}`,
     ]);
+    assert.strictEqual(spawnConfig.env['CHATGPT_ELECTRON_USER_DATA_PATH'], expectedElectronDir);
     assert.strictEqual(spawnConfig.env['CODEX_ELECTRON_USER_DATA_PATH'], expectedElectronDir);
     assert.ok(spawnConfig.afterSpawn);
     assert.strictEqual(spawnConfig.detached, true);
@@ -200,6 +203,30 @@ describe('Codex App (Desktop) Launcher', () => {
     } finally {
       if (original !== undefined) {
         process.env['CODEX_DESKTOP_PATH'] = original;
+      } else {
+        delete process.env['CODEX_DESKTOP_PATH'];
+      }
+    }
+  });
+
+  test('buildSpawnConfig honors CHATGPT_DESKTOP_PATH override and takes precedence over CODEX_DESKTOP_PATH', async () => {
+    const originalChatgpt = process.env['CHATGPT_DESKTOP_PATH'];
+    const originalCodex = process.env['CODEX_DESKTOP_PATH'];
+    process.env['CHATGPT_DESKTOP_PATH'] = '/custom/ChatGPT';
+    process.env['CODEX_DESKTOP_PATH'] = '/custom/Codex';
+    try {
+      const config: GatewayConfig = { env: {}, baseUrl: 'https://api.openai.com/v1' };
+      const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'gpt-4o');
+      const spawnConfig = launcher.buildSpawnConfig(resolved, 'gpt-4o', []);
+      assert.strictEqual(spawnConfig.command, '/custom/ChatGPT');
+    } finally {
+      if (originalChatgpt !== undefined) {
+        process.env['CHATGPT_DESKTOP_PATH'] = originalChatgpt;
+      } else {
+        delete process.env['CHATGPT_DESKTOP_PATH'];
+      }
+      if (originalCodex !== undefined) {
+        process.env['CODEX_DESKTOP_PATH'] = originalCodex;
       } else {
         delete process.env['CODEX_DESKTOP_PATH'];
       }
