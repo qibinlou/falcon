@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import child_process from 'child_process';
 import type { GatewayConfig } from '../gateways/index.js';
 import type { AgentLauncher, ResolvedConfig, SpawnConfig } from './index.js';
 import { bifrost } from './shared/bifrost.js';
@@ -29,6 +30,17 @@ export class CodexLauncher implements AgentLauncher {
     apiKey: string,
     model: string,
   ): Promise<ResolvedConfig> {
+    const customPath = getCustomBinPath(this.slug);
+    const binaryPath = customPath || this.binaryName;
+
+    // Enforce Codex CLI version >= 0.134.0
+    const versionStr = getCodexVersion(binaryPath);
+    if (versionStr && !isModernCodex(versionStr)) {
+      throw new Error(
+        `Codex CLI version is ${versionStr}. Falcon requires Codex CLI >= 0.134.0. Please run 'npm install -g @openai/codex' or 'codex update' to upgrade.`,
+      );
+    }
+
     const env = { ...gatewayConfig.env };
     let baseUrl = gatewayConfig.baseUrl;
     let cleanup: (() => void) | undefined;
@@ -90,6 +102,39 @@ export class CodexLauncher implements AgentLauncher {
     const falconDir = process.env[ENV_FALCON_DIR] || DEFAULT_FALCON_DIR;
     return process.env[ENV_CODEX_HOME] || path.join(falconDir, this.slug);
   }
+}
+
+export function getCodexVersion(binaryPath: string): string | null {
+  try {
+    const proc = child_process.spawnSync(binaryPath, ['--version'], {
+      encoding: 'utf8',
+      timeout: 1000,
+    });
+    if (proc.status === 0) {
+      const match = proc.stdout.match(/(\d+\.\d+\.\d+)/);
+      return match ? match[1] : null;
+    }
+  } catch (_e) {
+    // Ignore and fallback
+  }
+  return null;
+}
+
+export function isModernCodex(versionStr: string | null): boolean {
+  if (!versionStr) {
+    return true; // fallback to modern
+  }
+  const match = versionStr.match(/(\d+)\.(\d+)\.(\d+)/);
+  if (!match) {
+    return true;
+  }
+  const major = parseInt(match[1], 10);
+  const minor = parseInt(match[2], 10);
+  const patch = parseInt(match[3], 10);
+  if (major > 0) return true;
+  if (minor > 134) return true;
+  if (minor === 134 && patch >= 0) return true;
+  return false;
 }
 
 async function ensureCodexConfig(

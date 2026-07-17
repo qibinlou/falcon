@@ -1,6 +1,7 @@
 import assert from 'node:assert';
 import { after, before, describe, test, mock } from 'node:test';
 import type { ChildProcess } from 'child_process';
+import child_process from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -446,6 +447,41 @@ name = "legacy-provider"
       assert.ok(fs.existsSync(profilePath), 'falcon.config.toml should exist');
       const profileContent = fs.readFileSync(profilePath, 'utf8');
       assert.ok(profileContent.includes('model = "deepseek/deepseek-v4-flash:free"'));
+    });
+
+    test('should throw error if Codex CLI version is < 0.134.0', async () => {
+      const config: GatewayConfig = {
+        env: {
+          OPENAI_API_KEY: 'sk-or-fake-key',
+          OPENAI_BASE_URL: 'https://openrouter.ai/api/v1',
+        },
+        baseUrl: 'https://openrouter.ai/api/v1',
+      };
+
+      process.env[ENV_CODEX_HOME] = sideEffectDir;
+
+      // Mock spawnSync to return an older version
+      const spawnSyncMock = mock.method(child_process, 'spawnSync', () => {
+        return {
+          status: 0,
+          stdout: 'codex-cli 0.130.0',
+          stderr: '',
+        } as unknown as child_process.SpawnSyncReturns<string>;
+      });
+
+      try {
+        await assert.rejects(
+          launcher.resolveConfig(
+            config,
+            'openrouter',
+            'sk-or-fake-key',
+            'deepseek/deepseek-v4-flash:free',
+          ),
+          /Falcon requires Codex CLI >= 0.134.0/,
+        );
+      } finally {
+        spawnSyncMock.mock.restore();
+      }
     });
   });
 });
