@@ -146,6 +146,14 @@ node dist/cli.js launch <agent> [options]
 pnpm add -g .
 ```
 
+### 🐳 Dev Container Network Access to Host
+
+When running Falcon inside a Docker container (such as a VS Code Dev Container) and trying to access an OpenAI Compatible endpoint running on your local host machine (such as LM Studio or Ollama):
+
+- **Localhost Boundary**: `localhost` and `127.0.0.1` resolve to the container itself.
+- **Accessing Host**: Use `http://host.docker.internal:<port>/v1` as the API Base URL (e.g. `http://host.docker.internal:1234/v1` for LM Studio, or `http://host.docker.internal:11434/v1` for Ollama).
+- **Linux Docker Host Resolution**: If `host.docker.internal` does not resolve natively, ensure you add the run argument `--add-host=host.docker.internal:host-gateway` to your container configuration.
+
 ---
 
 ## 🧩 Extending Falcon
