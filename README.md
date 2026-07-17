@@ -1,7 +1,7 @@
 # 🦅 Falcon — Launch any coding agent with any LLM in absolute privacy.
 
 
-[![npm version](https://img.shields.io/badge/npm-1.1.0-blue.svg?style=flat-square&color=0a0a0c)](https://www.npmjs.com/package/falconsh)
+[![npm version](https://img.shields.io/npm/v/falconsh?style=flat-square&color=0a0a0c)](https://www.npmjs.com/package/falconsh)
 [![Agent: Codex](https://img.shields.io/badge/Agent-Codex-orange.svg?style=flat-square&color=00a67e)](https://github.com/openai/codex)
 [![Agent: Claude Code](https://img.shields.io/badge/Agent-Claude%20Code-orange.svg?style=flat-square&color=cc9900)](https://docs.anthropic.com/en/docs/claude-code)
 [![Agent: OpenCode](https://img.shields.io/badge/Agent-OpenCode-blue.svg?style=flat-square&color=3399ff)](https://opencode.ai)
@@ -27,7 +27,7 @@ Falcon is an elegant command-line interface (CLI) and interactive Terminal User 
 
 ## 🚀 Quick Start
 
-Ensure you have [Node.js](https://nodejs.org/) installed (v22+ recommended).
+Ensure you have [Node.js](https://nodejs.org/) installed (v20+ required, v22+ recommended).
 
 ### 1. Installation & Usage
 
@@ -146,7 +146,7 @@ Falcon is structured to make extending gateways and agents straightforward:
 *   **[src/config.ts](./src/config.ts)**: Implements AES-256-CBC encryption to store credentials locally in `~/.falcon/config.json`.
 *   **[src/agents/](./src/agents/)**: Agent wrappers implementing `AgentLauncher` profile compilation and launch arguments.
     *   [claude.ts](./src/agents/claude.ts): Disables Claude telemetry/feedback and forces full privacy.
-*   [codex.ts](./src/agents/codex.ts): Updates Codex CLI's `config.toml` profile, writes `model.json` from OpenRouter catalog metadata, and disables analytics.
+*   [codex.ts](./src/agents/codex.ts): Enforces Codex CLI >= 0.134.0, updates Codex CLI's `config.toml` profile, writes `model.json` from OpenRouter catalog metadata, and disables analytics.
 *   [codex-app.ts](./src/agents/codex-app.ts): Configures Codex Desktop App's top-level config keys, `auth.json`, and custom isolated catalog built from the same metadata source.
 *   [codex-utils.ts](./src/agents/codex-utils.ts): Shared configuration helpers for Codex CLI and Desktop App launchers, including OpenRouter-backed context window and modality lookup with local caching.
     *   [opencode.ts](./src/agents/opencode.ts): Manages OpenCode's config directory and dynamically updates `opencode.json` config settings.

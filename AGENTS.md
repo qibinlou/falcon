@@ -1,4 +1,4 @@
-# 🦅 Falcon Agent Context & Developer Guideasfasfaa
+# 🦅 Falcon Agent Context & Developer Guide
 
 Welcome, Agent! This document provides comprehensive context on the Falcon codebase, including user guides, CLI references, architecture details, and development guidelines, maximizing your session context efficiency.
 
@@ -86,7 +86,7 @@ Falcon detects and initializes gateways based on the presence of specific enviro
 
 ### 🛠️ Agent-Specific Side-Effects
 
-*   **Codex**: Resolves target directory via `process.env.CODEX_HOME` (defaulting to `~/.codex/`). Modifies `config.toml` profile sections `[profiles.falcon]` and `[model_providers.<hostname>]`, and updates the list in `model.json`.
+*   **Codex**: Enforces a minimum Codex CLI version of `0.134.0`. Resolves target directory via `process.env.CODEX_HOME` (defaulting to `~/.codex/`). Modifies `config.toml` profile sections `[profiles.falcon]` and `[model_providers.<hostname>]`, and updates the list in `model.json`.
 *   **Codex Desktop App**: Resolves configuration directory under `process.env.FALCON_DIR/codex-app` or `~/.falcon/codex-app`. Dynamically manages top-level keys in `config.toml`, parses `model.json`, and persists key auth in `auth.json`.
 *   **Claude Code**: Directly relies on environment variables (`ANTHROPIC_API_KEY` or custom compatible endpoints like `ANTHROPIC_BASE_URL` mapped by the active gateway).
 *   **OpenCode**: Resolves config directory via `process.env.OPENCODE_CONFIG_DIR` (defaulting to `~/.falcon/opencode/` or using `FALCON_DIR`) and updates the `opencode.json` configuration settings.
