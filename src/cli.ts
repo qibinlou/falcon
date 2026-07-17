@@ -142,7 +142,12 @@ async function handleLaunch(
     gateway?: string;
   },
 ) {
-  const extraArgs = agentArgs || [];
+  const rawExtraArgs = agentArgs || [];
+  const {
+    model: parsedModel,
+    gateway: parsedGateway,
+    cleanedExtraArgs,
+  } = parseLaunchArgs(rawExtraArgs, options);
 
   // If no agent specified, show available agents
   if (!agentName) {
@@ -167,12 +172,12 @@ async function handleLaunch(
     process.exit(1);
   }
 
-  const shouldBypassTUI = extraArgs.length > 0 || options.model !== undefined;
+  const shouldBypassTUI = cleanedExtraArgs.length > 0 || parsedModel !== undefined;
 
   if (shouldBypassTUI) {
-    const model = options.model || 'auto';
+    const model = parsedModel || 'auto';
     const detected = detectGatewayInstances();
-    const gatewayName = options.gateway;
+    const gatewayName = parsedGateway;
     const targetGateway = gatewayName
       ? detected.find(
           (d) =>
@@ -212,7 +217,7 @@ async function handleLaunch(
     }
 
     const spawnConfig = withGatewayEnv({ fields: gatewayEnv }, () => {
-      return agent.buildSpawnConfig(resolvedConfig, model, extraArgs);
+      return agent.buildSpawnConfig(resolvedConfig, model, cleanedExtraArgs);
     });
 
     if (process.env['FALCON_DEBUG'] === 'true') {
@@ -240,6 +245,10 @@ async function handleLaunch(
     process.on('SIGINT', handleSignal);
     process.on('SIGTERM', handleSignal);
     process.on('exit', cleanUp);
+
+    if (process.env['FALCON_DEBUG'] === 'true') {
+      console.log('DEBUG: Spawning command:', spawnConfig.command, spawnConfig.args);
+    }
 
     const proc = spawn(spawnConfig.command, spawnConfig.args, {
       stdio: isDetached ? 'ignore' : 'inherit',
@@ -290,9 +299,9 @@ async function handleLaunch(
   // Launch the interactive TUI
   renderApp({
     agent,
-    preselectedModel: options.model,
-    preselectedGateway: options.gateway,
-    extraArgs,
+    preselectedModel: parsedModel,
+    preselectedGateway: parsedGateway,
+    extraArgs: cleanedExtraArgs,
   });
 }
 
@@ -459,6 +468,38 @@ const isMain =
     process.argv[1].endsWith('\\falconsh') ||
     process.argv[1] === 'cli.ts' ||
     process.argv[1] === 'cli.js');
+
+export function parseLaunchArgs(
+  extraArgs: string[],
+  options: { model?: string; gateway?: string },
+): {
+  model: string | undefined;
+  gateway: string | undefined;
+  cleanedExtraArgs: string[];
+} {
+  let model = options.model;
+  let gateway = options.gateway;
+  const cleanedExtraArgs: string[] = [];
+
+  for (let i = 0; i < extraArgs.length; i++) {
+    const arg = extraArgs[i];
+    if (arg === '-m' || arg === '--model') {
+      if (i + 1 < extraArgs.length) {
+        model = extraArgs[i + 1];
+        i++;
+      }
+    } else if (arg === '-g' || arg === '--gateway') {
+      if (i + 1 < extraArgs.length) {
+        gateway = extraArgs[i + 1];
+        i++;
+      }
+    } else {
+      cleanedExtraArgs.push(arg);
+    }
+  }
+
+  return { model, gateway, cleanedExtraArgs };
+}
 
 if (isMain) {
   const processedArgv = preprocessArgs(process.argv);

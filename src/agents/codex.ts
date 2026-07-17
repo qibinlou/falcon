@@ -81,12 +81,41 @@ export class CodexLauncher implements AgentLauncher {
     const codexDir = this.getCodexDir();
     const catalogPath = path.join(codexDir, 'model.json');
 
-    const args: string[] = ['--profile', 'falcon'];
+    const filteredExtraArgs: string[] = [];
+    let prompt: string | undefined;
+
+    for (let i = 0; i < extraArgs.length; i++) {
+      const arg = extraArgs[i];
+      if (arg === '-m' || arg === '--model') {
+        if (i + 1 < extraArgs.length) {
+          i++; // skip model name value
+        }
+      } else if (arg === '-p' || arg === '--prompt') {
+        if (i + 1 < extraArgs.length) {
+          prompt = extraArgs[i + 1];
+          i++;
+        }
+      } else {
+        filteredExtraArgs.push(arg);
+      }
+    }
+
+    const args: string[] = [];
+    if (prompt) {
+      args.push('exec');
+    }
+    args.push('--profile', 'falcon');
+
     if (model) {
       args.push('-c', `model_catalog_json=${catalogPath}`);
       args.push('-m', model);
     }
-    args.push(...extraArgs);
+
+    args.push(...filteredExtraArgs);
+
+    if (prompt) {
+      args.push(prompt);
+    }
 
     const customPath = getCustomBinPath(this.slug);
 
@@ -180,6 +209,7 @@ async function ensureCodexConfig(
   const providerLines = [
     `name = "${providerKey}"`,
     `base_url = "${baseUrl}"`,
+    `env_key = "OPENAI_API_KEY"`,
     `wire_api = "responses"`,
   ];
 

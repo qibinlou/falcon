@@ -6,7 +6,7 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { program, preprocessArgs } from './cli.js';
+import { program, preprocessArgs, parseLaunchArgs } from './cli.js';
 
 describe('CLI Unit Tests', () => {
   describe('preprocessArgs()', () => {
@@ -67,6 +67,26 @@ describe('CLI Unit Tests', () => {
       const gatewayOpt = launchCmd.options.find((o) => o.short === '-g');
       assert.ok(gatewayOpt);
       assert.equal(gatewayOpt.long, '--gateway');
+    });
+  });
+
+  describe('parseLaunchArgs()', () => {
+    it('extracts model and gateway options from extraArgs and cleans extraArgs', () => {
+      const extraArgs = ['-m', 'openrouter/free', '-g', 'openrouter', 'some-prompt'];
+      const options = {};
+      const result = parseLaunchArgs(extraArgs, options);
+      assert.equal(result.model, 'openrouter/free');
+      assert.equal(result.gateway, 'openrouter');
+      assert.deepEqual(result.cleanedExtraArgs, ['some-prompt']);
+    });
+
+    it('prefers options from options parameter if already parsed by commander', () => {
+      const extraArgs = ['some-prompt'];
+      const options = { model: 'gpt-4o', gateway: 'openai' };
+      const result = parseLaunchArgs(extraArgs, options);
+      assert.equal(result.model, 'gpt-4o');
+      assert.equal(result.gateway, 'openai');
+      assert.deepEqual(result.cleanedExtraArgs, ['some-prompt']);
     });
   });
 });

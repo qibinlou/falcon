@@ -43,8 +43,10 @@
     "launch:claude-with-anthropic-gateway": "pnpm run dev -- launch claude --verbose -m claude-haiku-4-5 -p 'Who is your model maker?' --system-prompt 'You are a concise assistant.'",
     "launch:codex-auth-status": "export CODEX_HOME=~/.falcon/codex && pnpm run dev -- launch codex -m auto login status",
     "launch:codex-it": "export CODEX_HOME=~/.falcon/codex && pnpm run dev -- launch codex -m openrouter/free",
+    "launch:codex-with-prompt": "export CODEX_HOME=~/.falcon/codex && pnpm run dev -- launch codex -m openrouter/free -p 'Who is your model maker?'",
     "launch:opencode-with-prompt": "pnpm run dev -- launch opencode -m deepseek/deepseek-v4-flash:free -p 'Who is your model maker?'",
-    "launch:claude-installer": "PATH=/bin FALCON_DIR=/tmp/falcon-clean-test-dir pnpm run dev -- launch claude"
+    "launch:claude-installer": "PATH=/bin FALCON_DIR=/tmp/falcon-clean-test-dir pnpm run dev -- launch claude",
+    "publish": "pnpm run build && pnpm run publish"
   },
   "dependencies": {
     "@maximhq/bifrost": "1.6.3",

@@ -90,6 +90,32 @@ describe('Codex Agent Launcher', () => {
     assert.ok(spawnConfig.args.includes('gpt-4o'));
     assert.ok(spawnConfig.args.includes('--verbose'));
 
+    // Test cleaning up duplicate model flags, and translating prompt options
+    const spawnConfigWithPrompts = launcher.buildSpawnConfig(resolved, 'gpt-4o', [
+      '-m',
+      'openrouter/free',
+      '-p',
+      'Who is your model maker?',
+      '--verbose',
+    ]);
+
+    // It should prepend 'exec' to run in non-interactive mode when a prompt is present
+    assert.strictEqual(spawnConfigWithPrompts.args[0], 'exec');
+
+    // It should not contain multiple -m flags, only the one explicitly parsed by the launcher
+    const mIndices = spawnConfigWithPrompts.args.flatMap((arg, idx) => (arg === '-m' ? [idx] : []));
+    assert.strictEqual(mIndices.length, 1);
+    assert.strictEqual(spawnConfigWithPrompts.args[mIndices[0] + 1], 'gpt-4o');
+
+    // It should contain the prompt as the final positional argument
+    const finalArg = spawnConfigWithPrompts.args[spawnConfigWithPrompts.args.length - 1];
+    assert.strictEqual(finalArg, 'Who is your model maker?');
+
+    assert.ok(
+      spawnConfigWithPrompts.args.includes('--verbose'),
+      'should preserve other extra args',
+    );
+
     // Check files generated in tempDir
     const configPath = path.join(tempDir, 'config.toml');
     const catalogPath = path.join(tempDir, 'model.json');
@@ -108,6 +134,10 @@ describe('Codex Agent Launcher', () => {
     assert.ok(
       !configContent.includes('[profiles.falcon]'),
       'config.toml should not contain legacy profile section',
+    );
+    assert.ok(
+      configContent.includes('env_key = "OPENAI_API_KEY"'),
+      'config.toml should contain env_key = "OPENAI_API_KEY"',
     );
 
     // Verify model.json contents
@@ -165,6 +195,10 @@ describe('Codex Agent Launcher', () => {
       assert.ok(
         !configContent.includes('[profiles.falcon]'),
         'config.toml should not contain legacy profile section',
+      );
+      assert.ok(
+        configContent.includes('env_key = "OPENAI_API_KEY"'),
+        'config.toml should contain env_key = "OPENAI_API_KEY"',
       );
     } finally {
       mock.reset();
@@ -301,6 +335,10 @@ describe('Codex Agent Launcher', () => {
       assert.ok(
         !configContent.includes('[profiles.falcon]'),
         'config.toml should not contain legacy profile section',
+      );
+      assert.ok(
+        configContent.includes('env_key = "OPENAI_API_KEY"'),
+        'config.toml should contain env_key = "OPENAI_API_KEY"',
       );
 
       const catalogContent = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
