@@ -56,7 +56,7 @@ export function ConfigureGatewayInput({
   const fields = CONFIG_FIELDS[gateway.slug] || [
     {
       label: `${gateway.name} API Key`,
-      envVar: `${gateway.slug.toUpperCase()}_API_KEY`,
+      envVar: gateway.apiKeyEnvVar || `${gateway.slug.toUpperCase()}_API_KEY`,
       mask: true,
     },
   ];
@@ -116,16 +116,8 @@ export function ConfigureGatewayInput({
       setIsValidating(true);
       setValidationError(null);
 
-      let apiKey = '';
-      if (gateway.slug === 'openrouter') {
-        apiKey = newValues.OPENROUTER_API_KEY || '';
-      } else if (gateway.slug === 'openai') {
-        apiKey = newValues.OPENAI_API_KEY || '';
-      } else if (gateway.slug === 'anthropic') {
-        apiKey = newValues.ANTHROPIC_API_KEY || '';
-      } else if (gateway.slug === 'cloudflare') {
-        apiKey = newValues.CLOUDFLARE_API_KEY || '';
-      }
+      const keyVar = gateway.apiKeyEnvVar || `${gateway.slug.toUpperCase()}_API_KEY`;
+      const apiKey = newValues[keyVar] || '';
 
       try {
         await withGatewayEnvAsync({ fields: newValues }, async () => {

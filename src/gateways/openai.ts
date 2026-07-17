@@ -6,6 +6,7 @@ import type { Gateway, GatewayConfig, ModelInfo } from './index.js';
 export class OpenAIGateway implements Gateway {
   name = 'OpenAI';
   slug = 'openai';
+  apiKeyEnvVar = 'OPENAI_API_KEY';
 
   detectKey(): string | undefined {
     return process.env['OPENAI_API_KEY'];

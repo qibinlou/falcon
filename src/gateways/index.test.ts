@@ -1,8 +1,15 @@
 import assert from 'node:assert';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
-import { ALL_GATEWAYS, detectGateways, getGatewayInstanceLabel } from './index.js';
+import {
+  ALL_GATEWAYS,
+  detectGateways,
+  getGatewayInstanceLabel,
+  detectGatewayInstances,
+  type Gateway,
+} from './index.js';
 
 describe('Gateways Registry', () => {
   let originalEnv: Record<string, string | undefined>;
@@ -120,5 +127,61 @@ describe('Gateways Registry', () => {
       CLOUDFLARE_ACCOUNT_ID: 'my-cf-acc',
     });
     assert.strictEqual(cfLabel, 'Cloudflare@my-cf-acc');
+  });
+
+  test('detectGatewayInstances should dynamically extract apiKey based on apiKeyEnvVar', async () => {
+    // Create a mock custom gateway
+    const mockCustomGateway: Gateway = {
+      name: 'Custom mock',
+      slug: 'custom-mock',
+      apiKeyEnvVar: 'CUSTOM_MOCK_API_KEY',
+      detectKey() {
+        return undefined;
+      },
+      async listModels() {
+        return [];
+      },
+      getEnvConfig() {
+        return { env: {} };
+      },
+    };
+
+    ALL_GATEWAYS.push(mockCustomGateway);
+
+    // Save a config with fields for this gateway
+    const configPath = path.join(os.tmpdir(), 'test-custom-gateway-config.json');
+    const oldConfig = process.env.FALCON_CONFIG_FILE;
+    process.env.FALCON_CONFIG_FILE = configPath;
+
+    const { saveFalconConfigV2 } = await import('../config.js');
+    saveFalconConfigV2({
+      version: 2,
+      gateways: [
+        {
+          id: 'test-custom',
+          gatewaySlug: 'custom-mock',
+          fields: {
+            CUSTOM_MOCK_API_KEY: 'secret-custom-key',
+          },
+        },
+      ],
+    });
+
+    try {
+      const instances = detectGatewayInstances();
+      const customInst = instances.find((i) => i.gateway.slug === 'custom-mock');
+      assert.ok(customInst);
+      assert.strictEqual(customInst.apiKey, 'secret-custom-key');
+    } finally {
+      ALL_GATEWAYS.pop();
+      try {
+        fs.unlinkSync(configPath);
+      } catch {}
+      if (oldConfig) {
+        process.env.FALCON_CONFIG_FILE = oldConfig;
+      } else {
+        delete process.env.FALCON_CONFIG_FILE;
+      }
+    }
   });
 });

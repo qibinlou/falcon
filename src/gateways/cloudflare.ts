@@ -5,6 +5,7 @@ import type { Gateway, GatewayConfig, ModelInfo } from './index.js';
 export class CloudflareGateway implements Gateway {
   name = 'Cloudflare AI Gateway';
   slug = 'cloudflare';
+  apiKeyEnvVar = 'CLOUDFLARE_API_KEY';
 
   detectKey(): string | undefined {
     return process.env['CLOUDFLARE_API_KEY'] || process.env['CF_API_KEY'];

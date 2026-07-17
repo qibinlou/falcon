@@ -22,6 +22,8 @@ export interface GatewayConfig {
 export interface Gateway {
   name: string;
   slug: string;
+  // API key env var name, e.g. OPENAI_API_KEY
+  apiKeyEnvVar?: string;
   detectKey(): string | undefined;
   listModels(apiKey: string): Promise<ModelInfo[]>;
   getEnvConfig(apiKey: string, model: string): GatewayConfig;
@@ -197,18 +199,8 @@ export function detectGatewayInstances(): GatewayInstance[] {
   for (const gwConfig of config.gateways) {
     const gw = ALL_GATEWAYS.find((g) => g.slug === gwConfig.gatewaySlug);
     if (gw) {
-      let apiKey = '';
-      if (gwConfig.gatewaySlug === 'openrouter') {
-        apiKey = gwConfig.fields.OPENROUTER_API_KEY || '';
-      } else if (gwConfig.gatewaySlug === 'openai') {
-        apiKey = gwConfig.fields.OPENAI_API_KEY || '';
-      } else if (gwConfig.gatewaySlug === 'anthropic') {
-        apiKey = gwConfig.fields.ANTHROPIC_API_KEY || '';
-      } else if (gwConfig.gatewaySlug === 'cloudflare') {
-        apiKey = gwConfig.fields.CLOUDFLARE_API_KEY || '';
-      } else if (gwConfig.gatewaySlug === 'kimi') {
-        apiKey = gwConfig.fields.MOONSHOT_API_KEY || '';
-      }
+      const keyVar = gw.apiKeyEnvVar || `${gw.slug.toUpperCase()}_API_KEY`;
+      const apiKey = gwConfig.fields[keyVar] || '';
 
       instances.push({
         id: gwConfig.id,

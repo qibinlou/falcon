@@ -72,6 +72,7 @@ export interface OpenAICustomGatewayConfig {
 export class OpenAICustomGateway implements Gateway {
   readonly name: string;
   readonly slug: string;
+  readonly apiKeyEnvVar: string;
 
   protected readonly config: OpenAICustomGatewayConfig;
 
@@ -79,6 +80,7 @@ export class OpenAICustomGateway implements Gateway {
     this.config = config;
     this.name = config.name;
     this.slug = config.slug;
+    this.apiKeyEnvVar = config.apiKeyEnvVar;
   }
 
   detectKey(): string | undefined {
@@ -104,7 +106,6 @@ export class OpenAICustomGateway implements Gateway {
     const res = await fetch(url, { headers });
 
     if (!res.ok) {
-      console.error(`url: ${url}, headers: ${JSON.stringify(headers)}`);
       throw new Error(`${this.config.name} API error: ${res.status} ${res.statusText}`);
     }
 

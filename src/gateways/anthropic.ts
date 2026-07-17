@@ -7,6 +7,7 @@ import type { Gateway, GatewayConfig, ModelInfo } from './index.js';
 export class AnthropicGateway implements Gateway {
   name = 'Anthropic';
   slug = 'anthropic';
+  apiKeyEnvVar = 'ANTHROPIC_API_KEY';
 
   detectKey(): string | undefined {
     return process.env['ANTHROPIC_API_KEY'];

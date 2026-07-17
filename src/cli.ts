@@ -313,7 +313,7 @@ program
   .option('-m, --model <model>', 'Model to use')
   .option(
     '-g, --gateway <gateway>',
-    'API gateway to use (openrouter, openai, anthropic, cloudflare)',
+    'API gateway to use (openrouter, openai, anthropic, cloudflare, kimi)',
   )
   .option('--list-gateways', 'List detected API gateways and exit')
   .allowUnknownOption(true)
@@ -335,7 +335,7 @@ program
           console.log(chalk.red('No API keys detected.'));
           console.log(
             chalk.dim(
-              'Set one of: OPENROUTER_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, CLOUDFLARE_API_KEY',
+              'Set one of: OPENROUTER_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, CLOUDFLARE_API_KEY, MOONSHOT_API_KEY',
             ),
           );
           process.exit(1);
@@ -364,7 +364,7 @@ for (const agent of ALL_AGENTS) {
     .option('-m, --model <model>', 'Model to use')
     .option(
       '-g, --gateway <gateway>',
-      'API gateway to use (openrouter, openai, anthropic, cloudflare)',
+      'API gateway to use (openrouter, openai, anthropic, cloudflare, kimi)',
     )
     .allowUnknownOption(true)
     .helpOption(false)

@@ -8,6 +8,7 @@ import type { Gateway, GatewayConfig, ModelInfo } from './index.js';
 export class OpenRouterGateway implements Gateway {
   name = 'OpenRouter';
   slug = 'openrouter';
+  apiKeyEnvVar = 'OPENROUTER_API_KEY';
 
   detectKey(): string | undefined {
     return process.env['OPENROUTER_API_KEY'];
