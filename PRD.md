@@ -13,6 +13,7 @@ CLI commands design should follow docker's CLI design style.
 ## Supported Agents
 - `codex` - OpenAI's Codex 
 - `claude` - Anthropic's Claude Code
+- `opencode` - OpenCode TUI Agent
 
 ## CLI Design Notes
 - falcon's local config path is `~/.falcon/`

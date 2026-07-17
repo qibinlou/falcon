@@ -10,13 +10,13 @@
 [![Built with TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg?style=flat-square&color=3178c6)](https://www.typescriptlang.org/)
 [![UI: Ink](https://img.shields.io/badge/UI-Ink%20%26%20React-red.svg?style=flat-square&color=ff5a5f)](https://github.com/vadimdemedes/ink)
 
-Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
+Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway, Kimi, and OpenAI Compatible custom endpoints), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
 
 ---
 
 ## 🎯 Why Falcon?
 
-*   **API Gateway Abstraction**: No more memorizing gateway endpoints or manual token configurations. Falcon automatically maps models and manages API endpoints across OpenAI, Anthropic, OpenRouter, and Cloudflare AI Gateway.
+*   **API Gateway Abstraction**: No more memorizing gateway endpoints or manual token configurations. Falcon automatically maps models and manages API endpoints across OpenAI, Anthropic, OpenRouter, Cloudflare AI Gateway, Kimi, and custom OpenAI Compatible providers (such as Ollama or LM Studio).
 *   **Bifrost Translation Engine**: Want to run Anthropic's Claude Code using an OpenAI API key? Or run Codex using an Anthropic endpoint? Falcon utilizes a built-in proxy engine (`@maximhq/bifrost`) under the hood to automatically translate Anthropic's messaging protocol to OpenAI's completion format and vice-versa.
 *   **TUI Model Catalog Explorer**: Search and filter through hundreds of models in a rich, keyboard-navigable terminal interface. View context lengths, modalities, and token pricing directly before launching your agent. Falcon derives those details from live gateway catalogs and keeps a local cache for repeat launches.
 *   **Security & Encryption**: Your API keys are encrypted at rest using platform-specific material and AES-256-CBC, stored securely under `~/.falcon/config.json`.
@@ -72,6 +72,7 @@ Falcon automatically detects keys from your environment. Simply set any of the f
 export OPENROUTER_API_KEY="sk-or-..."
 export OPENAI_API_KEY="sk-proj-..."
 export ANTHROPIC_API_KEY="sk-ant-..."
+export MOONSHOT_API_KEY="sk-..." # Kimi (Moonshot AI)
 ```
 
 *(Alternatively, run in interactive mode to add and encrypt your gateway API keys via the TUI!)*
@@ -120,7 +121,7 @@ falcon claude --model chat-latest
 | Option | Shorthand | Description |
 | :--- | :--- | :--- |
 | `--model <model>` | `-m` | Skip interactive picker and launch directly with the specified model name. |
-| `--gateway <gateway>` | `-g` | Specific API gateway to route requests (`openrouter`, `openai`, `anthropic`, `cloudflare`). |
+| `--gateway <gateway>` | `-g` | Specific API gateway to route requests (`openrouter`, `openai`, `anthropic`, `cloudflare`, `kimi`, `openai-compatible`). |
 | `--list-gateways` | — | Display all detected API keys and active gateways, then exit. |
 
 ---
@@ -135,6 +136,8 @@ Falcon leverages environment variables to identify and initialize connections to
 | **OpenAI** | `OPENAI_API_KEY`<br>`OPENAI_BASE_URL` (optional) | Live fetches native OpenAI/compatible catalog including reasoning models. |
 | **Anthropic** | `ANTHROPIC_API_KEY`<br>`ANTHROPIC_BASE_URL` (optional) | Queries official Anthropic models with rich metadata catalog. |
 | **Cloudflare AI Gateway** | `CLOUDFLARE_API_KEY` or `CF_API_KEY`<br>`CLOUDFLARE_ACCOUNT_ID`<br>`CLOUDFLARE_GATEWAY_ID` | Routes requests through Cloudflare's secure AI proxy, auto-injecting gateway custom headers. |
+| **Kimi** | `MOONSHOT_API_KEY` | Queries Moonshot AI Kimi API endpoints natively. |
+| **OpenAI Compatible** | `OPENAI_COMPATIBLE_API_KEY` (optional)<br>`OPENAI_COMPATIBLE_BASE_URL`<br>`OPENAI_COMPATIBLE_NAME` | Configures custom endpoints (Ollama, LM Studio, or remote custom endpoints) dynamically. |
 
 ---
 

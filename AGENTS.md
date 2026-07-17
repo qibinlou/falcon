@@ -6,10 +6,10 @@ Welcome, Agent! This document provides comprehensive context on the Falcon codeb
 
 ## 📖 System Overview & Features
 
-**Falcon** is a CLI and Terminal User Interface (TUI) tool written in TypeScript. It wraps coding agents—specifically [Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/) (Electron build), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway), allowing you to launch coding agents with a single command.
+**Falcon** is a CLI and Terminal User Interface (TUI) tool written in TypeScript. It wraps coding agents—specifically [Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway, Kimi, and OpenAI Compatible custom endpoints), allowing you to launch coding agents with a single command.
 
 ### Key Features
-- **Multi-gateway support** — Auto-detects API keys from OpenRouter, OpenAI, Anthropic, and Cloudflare.
+- **Multi-gateway support** — Auto-detects API keys from OpenRouter, OpenAI, Anthropic, Cloudflare, Kimi, and custom OpenAI Compatible providers.
 - **Interactive model picker** — Search/filter from hundreds of models in a rich TUI.
 - **Gateway browser** — When multiple keys are set, choose which gateway to use.
 - **Launch confirmation** — See model details (pricing, context window) before launching.
@@ -68,7 +68,7 @@ falcon --help                      # Show help
 | Flag | Description |
 | :--- | :--- |
 | `-m, --model <model>` | Model to use (skips interactive picker) |
-| `-g, --gateway <gateway>` | API gateway to use (`openrouter`, `openai`, `anthropic`, `cloudflare`) |
+| `-g, --gateway <gateway>` | API gateway to use (`openrouter`, `openai`, `anthropic`, `cloudflare`, `kimi`, `openai-compatible`) |
 | `--list-gateways` | List detected API gateways and exit |
 
 ---
@@ -83,6 +83,8 @@ Falcon detects and initializes gateways based on the presence of specific enviro
 | **OpenAI** | `OPENAI_API_KEY` | Live model listing, native GPT/o-series/Codex models. |
 | **Anthropic** | `ANTHROPIC_API_KEY` | Hardcoded fallback model catalog for Claude models (since Anthropic lacks a public model listing API). |
 | **Cloudflare AI Gateway** | `CLOUDFLARE_API_KEY` or `CF_API_KEY` | Proxy to multiple providers based on `CLOUDFLARE_ACCOUNT_ID`/`CF_ACCOUNT_ID` and `CLOUDFLARE_GATEWAY_ID`/`CF_GATEWAY_ID`. |
+| **Kimi** | `MOONSHOT_API_KEY` | Native Moonshot AI Kimi API endpoints compatibility. |
+| **OpenAI Compatible** | `OPENAI_COMPATIBLE_API_KEY` (optional) | Custom endpoints (Ollama, LM Studio) dynamically resolved by name and base URL. |
 
 ### 🛠️ Agent-Specific Side-Effects
 
@@ -110,6 +112,9 @@ Here is how the codebase is structured:
     *   **[src/gateways/index.ts](./src/gateways/index.ts)**: Declares the [Gateway](./src/gateways/index.ts#L19) interface, [ModelInfo](./src/gateways/index.ts#L3), and the `ALL_GATEWAYS` registry list.
     *   **[src/gateways/openrouter.ts](./src/gateways/openrouter.ts)**: Live fetches models from OpenRouter's HTTP endpoint. Sets up OpenAI and Anthropic compatible environment variables for Codex/Claude routing.
     *   **[src/gateways/openai.ts](./src/gateways/openai.ts)**: Fetches and filters OpenAI models (GPT/o-series/Codex).
+    *   **[src/gateways/openai-custom.ts](./src/gateways/openai-custom.ts)**: Base reusable gateway class for any OpenAI-compatible provider.
+    *   **[src/gateways/kimi.ts](./src/gateways/kimi.ts)**: Native Kimi API gateway.
+    *   **[src/gateways/openai-compatible.ts](./src/gateways/openai-compatible.ts)**: OpenAI Compatible custom gateway.
     *   **[src/gateways/anthropic.ts](./src/gateways/anthropic.ts)**: Hardcoded fallback model catalog for Claude models (since Anthropic lacks a public model listing API).
     *   **[src/gateways/cloudflare.ts](./src/gateways/cloudflare.ts)**: Proxies requests to other providers through Cloudflare AI Gateway based on Account and Gateway IDs.
 *   **[src/ui/](./src/ui/)**: React components utilizing Ink to build TUI states:
