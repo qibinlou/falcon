@@ -1,6 +1,6 @@
 {
   "name": "falconsh",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Run any coding agent with any LLM in absolute privacy. Currently support Claude Code, Codex and OpenCode.",
   "type": "module",
   "packageManager": "pnpm@11.1.3",
@@ -46,7 +46,7 @@
     "launch:codex-with-prompt": "export CODEX_HOME=~/.falcon/codex && pnpm run dev -- launch codex -m openrouter/free -p 'Who is your model maker?'",
     "launch:opencode-with-prompt": "pnpm run dev -- launch opencode -m deepseek/deepseek-v4-flash:free -p 'Who is your model maker?'",
     "launch:claude-installer": "PATH=/bin FALCON_DIR=/tmp/falcon-clean-test-dir pnpm run dev -- launch claude",
-    "publish": "pnpm run build && pnpm run publish"
+    "publish": "pnpm run build && pnpm publish"
   },
   "dependencies": {
     "@maximhq/bifrost": "1.6.3",
