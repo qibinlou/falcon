@@ -25,12 +25,13 @@ describe('Gateways Registry', () => {
   });
 
   test('ALL_GATEWAYS should contain standard gateways', () => {
-    assert.ok(ALL_GATEWAYS.length >= 4);
+    assert.ok(ALL_GATEWAYS.length >= 5);
     const slugs = ALL_GATEWAYS.map((g) => g.slug);
     assert.ok(slugs.includes('openrouter'));
     assert.ok(slugs.includes('openai'));
     assert.ok(slugs.includes('anthropic'));
     assert.ok(slugs.includes('cloudflare'));
+    assert.ok(slugs.includes('kimi'));
   });
 
   test('detectGateways should return empty array if no keys are set', () => {
@@ -40,6 +41,7 @@ describe('Gateways Registry', () => {
     delete process.env['ANTHROPIC_API_KEY'];
     delete process.env['CLOUDFLARE_API_KEY'];
     delete process.env['CF_API_KEY'];
+    delete process.env['MOONSHOT_API_KEY'];
 
     const detected = detectGateways();
     assert.strictEqual(detected.length, 0);
@@ -50,6 +52,7 @@ describe('Gateways Registry', () => {
     delete process.env['OPENAI_API_KEY'];
     delete process.env['CLOUDFLARE_API_KEY'];
     delete process.env['CF_API_KEY'];
+    delete process.env['MOONSHOT_API_KEY'];
 
     process.env['ANTHROPIC_API_KEY'] = 'sk-ant-testkey';
 
@@ -63,6 +66,7 @@ describe('Gateways Registry', () => {
     delete process.env['OPENROUTER_API_KEY'];
     delete process.env['CLOUDFLARE_API_KEY'];
     delete process.env['CF_API_KEY'];
+    delete process.env['MOONSHOT_API_KEY'];
 
     process.env['OPENAI_API_KEY'] = 'sk-openai-key';
     process.env['ANTHROPIC_API_KEY'] = 'sk-ant-key';
@@ -73,6 +77,23 @@ describe('Gateways Registry', () => {
     const slugs = detected.map((d) => d.gateway.slug);
     assert.ok(slugs.includes('openai'));
     assert.ok(slugs.includes('anthropic'));
+  });
+
+  test('detectGateways should detect Kimi gateway via MOONSHOT_API_KEY', () => {
+    delete process.env['OPENROUTER_API_KEY'];
+    delete process.env['OPENAI_API_KEY'];
+    delete process.env['ANTHROPIC_API_KEY'];
+    delete process.env['CLOUDFLARE_API_KEY'];
+    delete process.env['CF_API_KEY'];
+
+    process.env['MOONSHOT_API_KEY'] = 'sk-moonshot-test';
+
+    const detected = detectGateways();
+    assert.strictEqual(detected.length, 1);
+    assert.strictEqual(detected[0]?.gateway.slug, 'kimi');
+    assert.strictEqual(detected[0]?.apiKey, 'sk-moonshot-test');
+
+    delete process.env['MOONSHOT_API_KEY'];
   });
 
   test('getGatewayInstanceLabel should map official hosts to readable names', () => {

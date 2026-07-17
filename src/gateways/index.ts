@@ -29,11 +29,15 @@ export interface Gateway {
 
 export { AnthropicGateway } from './anthropic.js';
 export { CloudflareGateway } from './cloudflare.js';
+export { KimiGateway } from './kimi.js';
+export { OpenAICustomGateway } from './openai-custom.js';
+export type { OpenAICustomGatewayConfig } from './openai-custom.js';
 export { OpenAIGateway } from './openai.js';
 export { OpenRouterGateway } from './openrouter.js';
 
 import { AnthropicGateway } from './anthropic.js';
 import { CloudflareGateway } from './cloudflare.js';
+import { KimiGateway } from './kimi.js';
 import { OpenAIGateway } from './openai.js';
 import { OpenRouterGateway } from './openrouter.js';
 import { loadFalconConfigV2 } from '../config.js';
@@ -48,6 +52,7 @@ export const ALL_GATEWAYS: Gateway[] = [
   new OpenAIGateway(),
   new AnthropicGateway(),
   new CloudflareGateway(),
+  new KimiGateway(),
 ];
 
 export interface GatewayInstance {
@@ -91,6 +96,9 @@ export function getGatewayInstanceLabel(
   }
   if (gatewaySlug === 'openrouter') {
     return 'OpenRouter';
+  }
+  if (gatewaySlug === 'kimi') {
+    return 'Kimi';
   }
   if (gatewaySlug === 'cloudflare') {
     const accountId = fields.CLOUDFLARE_ACCOUNT_ID || fields.CF_ACCOUNT_ID;
@@ -152,6 +160,18 @@ export function detectGatewayInstances(): GatewayInstance[] {
     });
   }
 
+  if (process.env.MOONSHOT_API_KEY) {
+    const gw = ALL_GATEWAYS.find((g) => g.slug === 'kimi') as Gateway;
+    instances.push({
+      id: 'env-kimi',
+      gateway: gw,
+      name: 'Kimi',
+      apiKey: process.env.MOONSHOT_API_KEY,
+      fields: { MOONSHOT_API_KEY: process.env.MOONSHOT_API_KEY },
+      isEnv: true,
+    });
+  }
+
   const cfKey = process.env.CLOUDFLARE_API_KEY || process.env.CF_API_KEY;
   if (cfKey) {
     const gw = ALL_GATEWAYS.find((g) => g.slug === 'cloudflare') as Gateway;
@@ -186,6 +206,8 @@ export function detectGatewayInstances(): GatewayInstance[] {
         apiKey = gwConfig.fields.ANTHROPIC_API_KEY || '';
       } else if (gwConfig.gatewaySlug === 'cloudflare') {
         apiKey = gwConfig.fields.CLOUDFLARE_API_KEY || '';
+      } else if (gwConfig.gatewaySlug === 'kimi') {
+        apiKey = gwConfig.fields.MOONSHOT_API_KEY || '';
       }
 
       instances.push({
@@ -214,6 +236,7 @@ export function withGatewayEnv<T>(instance: { fields: Record<string, string> }, 
     'CLOUDFLARE_GATEWAY_ID',
     'CF_GATEWAY_ID',
     'OPENROUTER_API_KEY',
+    'MOONSHOT_API_KEY',
   ];
   const saved: Record<string, string | undefined> = {};
   for (const k of keysToSave) {
@@ -256,6 +279,7 @@ export async function withGatewayEnvAsync<T>(
     'CLOUDFLARE_GATEWAY_ID',
     'CF_GATEWAY_ID',
     'OPENROUTER_API_KEY',
+    'MOONSHOT_API_KEY',
   ];
   const saved: Record<string, string | undefined> = {};
   for (const k of keysToSave) {
