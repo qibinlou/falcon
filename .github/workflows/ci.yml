@@ -12,6 +12,10 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        node-version: [20, 22, 24]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
 
       - name: Install dependencies
