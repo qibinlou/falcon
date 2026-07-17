@@ -38,6 +38,20 @@ const CONFIG_FIELDS: Record<string, ConfigField[]> = {
     { label: 'Cloudflare Account ID', envVar: 'CLOUDFLARE_ACCOUNT_ID' },
     { label: 'Cloudflare Gateway ID', envVar: 'CLOUDFLARE_GATEWAY_ID', defaultValue: 'default' },
   ],
+  'openai-compatible': [
+    { label: 'Provider Name (e.g. Ollama)', envVar: 'OPENAI_COMPATIBLE_NAME' },
+    {
+      label: 'API Base URL',
+      envVar: 'OPENAI_COMPATIBLE_BASE_URL',
+      defaultValue: 'http://localhost:11434/v1',
+    },
+    {
+      label: 'API Key',
+      envVar: 'OPENAI_COMPATIBLE_API_KEY',
+      mask: true,
+      optional: true,
+    },
+  ],
 };
 
 interface ConfigureGatewayInputProps {

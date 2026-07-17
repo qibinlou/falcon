@@ -32,13 +32,14 @@ describe('Gateways Registry', () => {
   });
 
   test('ALL_GATEWAYS should contain standard gateways', () => {
-    assert.ok(ALL_GATEWAYS.length >= 5);
+    assert.ok(ALL_GATEWAYS.length >= 6);
     const slugs = ALL_GATEWAYS.map((g) => g.slug);
     assert.ok(slugs.includes('openrouter'));
     assert.ok(slugs.includes('openai'));
     assert.ok(slugs.includes('anthropic'));
     assert.ok(slugs.includes('cloudflare'));
     assert.ok(slugs.includes('kimi'));
+    assert.ok(slugs.includes('openai-compatible'));
   });
 
   test('detectGateways should return empty array if no keys are set', () => {

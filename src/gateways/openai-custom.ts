@@ -87,16 +87,19 @@ export class OpenAICustomGateway implements Gateway {
     return process.env[this.config.apiKeyEnvVar];
   }
 
-  async listModels(apiKey: string): Promise<ModelInfo[]> {
+  async listModels(apiKey: string, fields?: Record<string, string>): Promise<ModelInfo[]> {
     try {
       await fetchModelMetadataCatalog();
     } catch {
       // Ignore errors fetching metadata catalog, fallback to normal list
     }
 
-    const url = this.config.baseUrl.endsWith('/')
-      ? `${this.config.baseUrl}models`
-      : `${this.config.baseUrl}/models`;
+    let baseUrl =
+      fields?.OPENAI_COMPATIBLE_BASE_URL ||
+      process.env.OPENAI_COMPATIBLE_BASE_URL ||
+      this.config.baseUrl;
+    baseUrl = baseUrl.replace(/(:\/\/|^)localhost(\/|:|$)/, '$1127.0.0.1$2');
+    const url = baseUrl.endsWith('/') ? `${baseUrl}models` : `${baseUrl}/models`;
 
     const headers: Record<string, string> = this.config.getAuthHeaders
       ? this.config.getAuthHeaders(apiKey)
@@ -137,16 +140,21 @@ export class OpenAICustomGateway implements Gateway {
       .sort(sortModels);
   }
 
-  getEnvConfig(apiKey: string, _model: string): GatewayConfig {
+  getEnvConfig(apiKey: string, _model: string, fields?: Record<string, string>): GatewayConfig {
+    let baseUrl =
+      fields?.OPENAI_COMPATIBLE_BASE_URL ||
+      process.env.OPENAI_COMPATIBLE_BASE_URL ||
+      this.config.baseUrl;
+    baseUrl = baseUrl.replace(/(:\/\/|^)localhost(\/|:|$)/, '$1127.0.0.1$2');
     return {
       env: {
         // OpenAI-compatible env vars so downstream agents (Codex, Claude) can route through this gateway
         OPENAI_API_KEY: apiKey,
-        OPENAI_BASE_URL: this.config.baseUrl,
+        OPENAI_BASE_URL: baseUrl,
         // Also set the provider's native env var
         [this.config.apiKeyEnvVar]: apiKey,
       },
-      baseUrl: this.config.baseUrl,
+      baseUrl,
     };
   }
 }

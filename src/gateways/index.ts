@@ -25,13 +25,14 @@ export interface Gateway {
   // API key env var name, e.g. OPENAI_API_KEY
   apiKeyEnvVar?: string;
   detectKey(): string | undefined;
-  listModels(apiKey: string): Promise<ModelInfo[]>;
-  getEnvConfig(apiKey: string, model: string): GatewayConfig;
+  listModels(apiKey: string, fields?: Record<string, string>): Promise<ModelInfo[]>;
+  getEnvConfig(apiKey: string, model: string, fields?: Record<string, string>): GatewayConfig;
 }
 
 export { AnthropicGateway } from './anthropic.js';
 export { CloudflareGateway } from './cloudflare.js';
 export { KimiGateway } from './kimi.js';
+export { OpenAICompatibleGateway } from './openai-compatible.js';
 export { OpenAICustomGateway } from './openai-custom.js';
 export type { OpenAICustomGatewayConfig } from './openai-custom.js';
 export { OpenAIGateway } from './openai.js';
@@ -40,6 +41,7 @@ export { OpenRouterGateway } from './openrouter.js';
 import { AnthropicGateway } from './anthropic.js';
 import { CloudflareGateway } from './cloudflare.js';
 import { KimiGateway } from './kimi.js';
+import { OpenAICompatibleGateway } from './openai-compatible.js';
 import { OpenAIGateway } from './openai.js';
 import { OpenRouterGateway } from './openrouter.js';
 import { loadFalconConfigV2 } from '../config.js';
@@ -55,6 +57,7 @@ export const ALL_GATEWAYS: Gateway[] = [
   new AnthropicGateway(),
   new CloudflareGateway(),
   new KimiGateway(),
+  new OpenAICompatibleGateway(),
 ];
 
 export interface GatewayInstance {
@@ -101,6 +104,9 @@ export function getGatewayInstanceLabel(
   }
   if (gatewaySlug === 'kimi') {
     return 'Kimi';
+  }
+  if (gatewaySlug === 'openai-compatible') {
+    return fields.OPENAI_COMPATIBLE_NAME || 'OpenAI Compatible';
   }
   if (gatewaySlug === 'cloudflare') {
     const accountId = fields.CLOUDFLARE_ACCOUNT_ID || fields.CF_ACCOUNT_ID;
@@ -229,6 +235,9 @@ export function withGatewayEnv<T>(instance: { fields: Record<string, string> }, 
     'CF_GATEWAY_ID',
     'OPENROUTER_API_KEY',
     'MOONSHOT_API_KEY',
+    'OPENAI_COMPATIBLE_API_KEY',
+    'OPENAI_COMPATIBLE_BASE_URL',
+    'OPENAI_COMPATIBLE_NAME',
   ];
   const saved: Record<string, string | undefined> = {};
   for (const k of keysToSave) {
@@ -272,6 +281,9 @@ export async function withGatewayEnvAsync<T>(
     'CF_GATEWAY_ID',
     'OPENROUTER_API_KEY',
     'MOONSHOT_API_KEY',
+    'OPENAI_COMPATIBLE_API_KEY',
+    'OPENAI_COMPATIBLE_BASE_URL',
+    'OPENAI_COMPATIBLE_NAME',
   ];
   const saved: Record<string, string | undefined> = {};
   for (const k of keysToSave) {
