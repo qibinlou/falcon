@@ -152,6 +152,17 @@ export function checkAgentInstalled(slug: string, binaryName: string): boolean {
     } catch {}
   }
 
+  if (path.isAbsolute(binaryName)) {
+    try {
+      const stats = fs.statSync(binaryName);
+      if (stats.isFile()) {
+        fs.accessSync(binaryName, fs.constants.X_OK);
+        return true;
+      }
+    } catch {}
+    return false;
+  }
+
   // Fallback to searching system PATH
   const pathEnv = process.env.PATH || '';
   const pathDirs = pathEnv.split(path.delimiter);

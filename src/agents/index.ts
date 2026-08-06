@@ -1,5 +1,5 @@
 import type { ChildProcess } from 'child_process';
-import type { GatewayConfig } from '../gateways/index.js';
+import type { GatewayConfig, ModelInfo } from '../gateways/index.js';
 
 export interface ResolvedConfig {
   env: Record<string, string>;
@@ -22,11 +22,13 @@ export interface AgentLauncher {
   slug: string;
   binaryName: string;
   installCommand: string;
+  modelCatalogMode?: 'gateway';
   resolveConfig(
     gatewayConfig: GatewayConfig,
     gatewaySlug: string,
     apiKey: string,
     model: string,
+    availableModels?: ModelInfo[],
   ): Promise<ResolvedConfig>;
   buildSpawnConfig(resolvedConfig: ResolvedConfig, model: string, extraArgs: string[]): SpawnConfig;
 }

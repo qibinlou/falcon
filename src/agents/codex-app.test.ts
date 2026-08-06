@@ -5,7 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import type { GatewayConfig } from '../gateways/index.js';
-import { CodexAppLauncher, readCatalogModelSlugs } from './codex-app.js';
+import { CodexAppLauncher } from './codex-app.js';
 import { bifrost } from './shared/bifrost.js';
 import { ENV_CODEX_HOME, ENV_FALCON_DIR } from '../constants.js';
 import {
@@ -18,16 +18,22 @@ describe('Codex App (Desktop) Launcher', () => {
   let codexAppDir: string;
   let originalFalconDir: string | undefined;
   let originalCodexHome: string | undefined;
+  let originalChatGptAuthPath: string | undefined;
   const launcher = new CodexAppLauncher();
 
   before(() => {
     originalFalconDir = process.env[ENV_FALCON_DIR];
     originalCodexHome = process.env[ENV_CODEX_HOME];
+    originalChatGptAuthPath = process.env['FALCON_CODEX_APP_CHATGPT_AUTH_PATH'];
     falconDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-app-test-'));
     process.env[ENV_FALCON_DIR] = falconDir;
     // A global CODEX_HOME must NOT redirect the desktop dir — it should always
     // live under FALCON_DIR/codex-app to stay isolated from the user's ~/.codex.
     delete process.env[ENV_CODEX_HOME];
+    process.env['FALCON_CODEX_APP_CHATGPT_AUTH_PATH'] = path.join(
+      falconDir,
+      'missing-primary-auth.json',
+    );
     codexAppDir = path.join(falconDir, 'codex-app');
     setLocalModelMetadataCache({
       'deepseek/deepseek-v4': {
@@ -52,6 +58,13 @@ describe('Codex App (Desktop) Launcher', () => {
     }
     if (originalCodexHome !== undefined) {
       process.env[ENV_CODEX_HOME] = originalCodexHome;
+    } else {
+      delete process.env[ENV_CODEX_HOME];
+    }
+    if (originalChatGptAuthPath !== undefined) {
+      process.env['FALCON_CODEX_APP_CHATGPT_AUTH_PATH'] = originalChatGptAuthPath;
+    } else {
+      delete process.env['FALCON_CODEX_APP_CHATGPT_AUTH_PATH'];
     }
     if (fs.existsSync(falconDir)) {
       fs.rmSync(falconDir, { recursive: true, force: true });
@@ -61,6 +74,12 @@ describe('Codex App (Desktop) Launcher', () => {
   test('should have correct details', () => {
     assert.strictEqual(launcher.name, 'Codex Desktop App');
     assert.strictEqual(launcher.slug, 'codex-app');
+    assert.strictEqual(
+      launcher.binaryName,
+      process.env['CHATGPT_DESKTOP_PATH'] ||
+        process.env['CODEX_DESKTOP_PATH'] ||
+        '/Applications/ChatGPT.app/Contents/MacOS/ChatGPT',
+    );
   });
 
   test('resolveConfig sets CODEX_HOME under FALCON_DIR/codex-app and passes env through', async () => {
@@ -77,7 +96,7 @@ describe('Codex App (Desktop) Launcher', () => {
     assert.strictEqual(resolved.env[ENV_CODEX_HOME], codexAppDir);
     assert.strictEqual(resolved.env['OPENAI_BASE_URL'], 'https://api.openai.com/v1');
     assert.strictEqual(resolved.env['OPENAI_API_KEY'], 'sk-openai-key');
-    assert.ok(Number(resolved.env['FALCON_CODEX_APP_DEBUG_PORT']) > 0);
+    assert.strictEqual(resolved.env['FALCON_CODEX_APP_DEBUG_PORT'], undefined);
   });
 
   test('resolveConfig writes model.json, top-level config.toml selection, and auth.json', async () => {
@@ -94,10 +113,12 @@ describe('Codex App (Desktop) Launcher', () => {
     const configPath = path.join(codexAppDir, 'config.toml');
     const catalogPath = path.join(codexAppDir, 'model.json');
     const authPath = path.join(codexAppDir, 'auth.json');
+    const cachePath = path.join(codexAppDir, 'models_cache.json');
 
     assert.ok(fs.existsSync(configPath), 'config.toml should exist');
     assert.ok(fs.existsSync(catalogPath), 'model.json should exist');
     assert.ok(fs.existsSync(authPath), 'auth.json should exist');
+    assert.ok(fs.existsSync(cachePath), 'models_cache.json should exist');
 
     // The desktop app reads top-level keys (it has no profile to activate).
     const configContent = fs.readFileSync(configPath, 'utf8');
@@ -106,6 +127,8 @@ describe('Codex App (Desktop) Launcher', () => {
     assert.ok(configContent.includes(`model_catalog_json = "${catalogPath}"`), 'top-level catalog');
     assert.ok(configContent.includes('[model_providers.openrouter-ai]'), 'provider section');
     assert.ok(configContent.includes('base_url = "https://openrouter.ai/api/v1/"'), 'base_url');
+    assert.ok(configContent.includes('requires_openai_auth = true'), 'native app auth gate');
+    assert.ok(configContent.includes('env_key = "OPENAI_API_KEY"'), 'gateway API key source');
     assert.ok(
       !configContent.includes('[profiles.falcon]'),
       'desktop config should not use a profile section',
@@ -125,6 +148,97 @@ describe('Codex App (Desktop) Launcher', () => {
     assert.strictEqual(entry.display_name, 'deepseek/deepseek-v4 - openrouter');
     assert.strictEqual(entry.context_window, 163840);
     assert.deepStrictEqual(entry.input_modalities, ['text']);
+    assert.strictEqual(entry.shell_type, 'shell_command');
+    assert.strictEqual(entry.default_reasoning_level, 'medium');
+    assert.ok(entry.description.length > 0);
+    assert.deepStrictEqual(
+      entry.supported_reasoning_levels.map((level: { effort: string }) => level.effort),
+      ['low', 'medium', 'high', 'xhigh'],
+    );
+
+    // Codex reads this cache before refreshing model.json. It must be deliberately
+    // stale and contain the same native-shaped rows so the app refreshes safely.
+    const cache = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    assert.strictEqual(cache.fetched_at, '2000-01-01T00:00:00Z');
+    assert.strictEqual(cache.client_version, '0.0.0');
+    assert.deepStrictEqual(cache.models, catalog.models);
+  });
+
+  test('resolveConfig preserves native ChatGPT auth metadata for the desktop model picker', async () => {
+    const primaryAuthPath = path.join(falconDir, 'primary-auth.json');
+    const primaryAuth = {
+      auth_mode: 'chatgpt',
+      OPENAI_API_KEY: null,
+      tokens: {
+        access_token: 'fake-access-token',
+        refresh_token: 'fake-refresh-token',
+        id_token: 'fake-id-token',
+        account_id: 'fake-account-id',
+      },
+      last_refresh: '2026-08-06T00:00:00Z',
+    };
+    fs.writeFileSync(primaryAuthPath, JSON.stringify(primaryAuth), { mode: 0o600 });
+    process.env['FALCON_CODEX_APP_CHATGPT_AUTH_PATH'] = primaryAuthPath;
+
+    try {
+      await launcher.resolveConfig(
+        {
+          env: {
+            OPENAI_API_KEY: 'sk-or-fake-key',
+            OPENAI_BASE_URL: 'https://openrouter.ai/api/v1',
+          },
+          baseUrl: 'https://openrouter.ai/api/v1',
+        },
+        'openrouter',
+        'sk-or-fake-key',
+        'openrouter/free',
+      );
+
+      const isolatedAuth = JSON.parse(
+        fs.readFileSync(path.join(codexAppDir, 'auth.json'), 'utf8'),
+      );
+      assert.deepStrictEqual(isolatedAuth, primaryAuth);
+      assert.notStrictEqual(isolatedAuth.OPENAI_API_KEY, 'sk-or-fake-key');
+    } finally {
+      process.env['FALCON_CODEX_APP_CHATGPT_AUTH_PATH'] = path.join(
+        falconDir,
+        'missing-primary-auth.json',
+      );
+    }
+  });
+
+  test('resolveConfig writes the selected gateway model catalog, with the selected model first', async () => {
+    await launcher.resolveConfig(
+      {
+        env: {
+          OPENAI_API_KEY: 'sk-or-fake-key',
+          OPENAI_BASE_URL: 'https://openrouter.ai/api/v1',
+        },
+        baseUrl: 'https://openrouter.ai/api/v1',
+      },
+      'openrouter',
+      'sk-or-fake-key',
+      'vendor/model-b',
+      [
+        { id: 'vendor/model-a', name: 'Model A', contextLength: 32000 },
+        { id: 'vendor/model-b', name: 'Model B', contextLength: 64000 },
+        { id: 'vendor/model-c', name: 'Model C', contextLength: 128000 },
+      ],
+    );
+
+    const catalog = JSON.parse(
+      fs.readFileSync(path.join(codexAppDir, 'model.json'), 'utf8'),
+    );
+    assert.deepStrictEqual(
+      catalog.models.map((entry: { slug: string }) => entry.slug),
+      ['vendor/model-b', 'vendor/model-a', 'vendor/model-c'],
+    );
+    assert.deepStrictEqual(
+      catalog.models.map((entry: { priority: number }) => entry.priority),
+      [0, 1, 2],
+    );
+    assert.strictEqual(catalog.models[0].display_name, 'vendor/model-b - openrouter');
+    assert.strictEqual(catalog.models[0].context_window, 64000);
   });
 
   test('buildSpawnConfig launches the desktop Electron binary with --user-data-dir', async () => {
@@ -147,12 +261,10 @@ describe('Codex App (Desktop) Launcher', () => {
     const expectedElectronDir = path.join(codexAppDir, 'electron-user-data');
     assert.deepStrictEqual(spawnConfig.args, [
       `--user-data-dir=${expectedElectronDir}`,
-      '--remote-debugging-address=127.0.0.1',
-      `--remote-debugging-port=${resolved.env['FALCON_CODEX_APP_DEBUG_PORT']}`,
     ]);
     assert.strictEqual(spawnConfig.env['CHATGPT_ELECTRON_USER_DATA_PATH'], expectedElectronDir);
     assert.strictEqual(spawnConfig.env['CODEX_ELECTRON_USER_DATA_PATH'], expectedElectronDir);
-    assert.ok(spawnConfig.afterSpawn);
+    assert.strictEqual(spawnConfig.afterSpawn, undefined);
     assert.strictEqual(spawnConfig.detached, true);
 
     // The Electron binary ignores Codex's own CLI flags — none should be passed.
@@ -169,13 +281,11 @@ describe('Codex App (Desktop) Launcher', () => {
     const expectedElectronDir = path.join(codexAppDir, 'electron-user-data');
     assert.deepStrictEqual(spawnConfig.args, [
       `--user-data-dir=${expectedElectronDir}`,
-      '--remote-debugging-address=127.0.0.1',
-      `--remote-debugging-port=${resolved.env['FALCON_CODEX_APP_DEBUG_PORT']}`,
       '/path/to/workspace',
     ]);
   });
 
-  test('buildSpawnConfig reuses caller-provided remote debugging port', async () => {
+  test('buildSpawnConfig forwards an explicit caller-provided remote debugging port without adding a hook', async () => {
     const config: GatewayConfig = { env: {}, baseUrl: 'https://api.openai.com/v1' };
     const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'gpt-4o');
     const spawnConfig = launcher.buildSpawnConfig(resolved, 'gpt-4o', [
@@ -189,7 +299,7 @@ describe('Codex App (Desktop) Launcher', () => {
       '--remote-debugging-port=9444',
       '/path/to/workspace',
     ]);
-    assert.ok(spawnConfig.afterSpawn);
+    assert.strictEqual(spawnConfig.afterSpawn, undefined);
   });
 
   test('buildSpawnConfig honors CODEX_DESKTOP_PATH override', async () => {
@@ -200,6 +310,7 @@ describe('Codex App (Desktop) Launcher', () => {
       const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'gpt-4o');
       const spawnConfig = launcher.buildSpawnConfig(resolved, 'gpt-4o', []);
       assert.strictEqual(spawnConfig.command, '/custom/Codex');
+      assert.strictEqual(launcher.binaryName, '/custom/Codex');
     } finally {
       if (original !== undefined) {
         process.env['CODEX_DESKTOP_PATH'] = original;
@@ -219,6 +330,7 @@ describe('Codex App (Desktop) Launcher', () => {
       const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'gpt-4o');
       const spawnConfig = launcher.buildSpawnConfig(resolved, 'gpt-4o', []);
       assert.strictEqual(spawnConfig.command, '/custom/ChatGPT');
+      assert.strictEqual(launcher.binaryName, '/custom/ChatGPT');
     } finally {
       if (originalChatgpt !== undefined) {
         process.env['CHATGPT_DESKTOP_PATH'] = originalChatgpt;
@@ -295,64 +407,4 @@ describe('Codex App (Desktop) Launcher', () => {
     assert.ok(slugs.includes('model-b'));
   });
 
-  describe('readCatalogModelSlugs', () => {
-    test('should return empty array if file does not exist', () => {
-      const nonExistentPath = path.join(codexAppDir, 'non-existent-model.json');
-      const result = readCatalogModelSlugs(nonExistentPath);
-      assert.deepStrictEqual(result, []);
-    });
-
-    test('should return empty array if file content is invalid JSON', () => {
-      const invalidPath = path.join(codexAppDir, 'invalid-model.json');
-      fs.writeFileSync(invalidPath, '{invalid', 'utf8');
-      try {
-        const result = readCatalogModelSlugs(invalidPath);
-        assert.deepStrictEqual(result, []);
-      } finally {
-        fs.rmSync(invalidPath, { force: true });
-      }
-    });
-
-    test('should return list of slugs from a valid model.json', () => {
-      const validPath = path.join(codexAppDir, 'temp-model.json');
-      const catalogData = {
-        models: [
-          { slug: 'model-1', display_name: 'Model 1' },
-          { slug: 'model-2', display_name: 'Model 2' },
-          { display_name: 'Unnamed' },
-        ],
-      };
-      fs.writeFileSync(validPath, JSON.stringify(catalogData), 'utf8');
-      try {
-        const result = readCatalogModelSlugs(validPath);
-        assert.deepStrictEqual(result, ['model-1', 'model-2']);
-      } finally {
-        fs.rmSync(validPath, { force: true });
-      }
-    });
-  });
-
-  test('buildSpawnConfig reads all model slugs from model.json to pass to patch', async () => {
-    const config: GatewayConfig = {
-      env: {
-        OPENAI_API_KEY: 'sk-openai-key',
-        OPENAI_BASE_URL: 'https://api.openai.com/v1',
-      },
-      baseUrl: 'https://api.openai.com/v1',
-    };
-
-    // First resolve two models to populate the catalog model.json
-    await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'model-1');
-    const resolved = await launcher.resolveConfig(config, 'openai', 'sk-openai-key', 'model-2');
-
-    // Run buildSpawnConfig
-    const spawnConfig = launcher.buildSpawnConfig(resolved, 'model-2', []);
-    assert.ok(spawnConfig.afterSpawn, 'afterSpawn hook should be present');
-
-    // Read the catalog to double check they exist
-    const catalogPath = path.join(codexAppDir, 'model.json');
-    const slugs = readCatalogModelSlugs(catalogPath);
-    assert.ok(slugs.includes('model-1'), 'catalog should contain model-1');
-    assert.ok(slugs.includes('model-2'), 'catalog should contain model-2');
-  });
 });

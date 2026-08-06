@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { Box, render, Text, useApp } from 'ink';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { AgentLauncher, ResolvedConfig } from '../agents/index.js';
+import { loadGatewayModelCatalog } from '../agents/model-catalog.js';
 import type { Gateway, GatewayInstance, ModelInfo } from '../gateways/index.js';
 import {
   ALL_GATEWAYS,
@@ -55,16 +56,23 @@ function App({ agent, preselectedModel, preselectedGateway, extraArgs }: AppProp
   const normalizedPreselectedGateway = preselectedGateway?.toLowerCase();
 
   const launchAgent = useCallback(
-    async (gateway: GatewayInstance, model: ModelInfo) => {
+    async (gateway: GatewayInstance, model: ModelInfo, knownModels?: ModelInfo[]) => {
       recordRecentModel(model);
       setState({ phase: 'launching', gateway, model });
 
       const config = gateway.gateway.getEnvConfig(gateway.apiKey, model.id);
+      const availableModels = knownModels ?? (await loadGatewayModelCatalog(agent, gateway));
       let resolved: ResolvedConfig;
 
       try {
         resolved = await withGatewayEnvAsync({ fields: gateway.fields }, async () => {
-          return await agent.resolveConfig(config, gateway.gateway.slug, gateway.apiKey, model.id);
+          return await agent.resolveConfig(
+            config,
+            gateway.gateway.slug,
+            gateway.apiKey,
+            model.id,
+            availableModels,
+          );
         });
       } catch (err) {
         console.error(
@@ -404,7 +412,16 @@ function App({ agent, preselectedModel, preselectedGateway, extraArgs }: AppProp
           agent={agent}
           gateway={{ name: state.gateway.name, slug: state.gateway.gateway.slug }}
           model={state.model}
-          onConfirm={() => launchAgent(state.gateway, state.model)}
+          onConfirm={() =>
+            launchAgent(
+              state.gateway,
+              state.model,
+              state.models.filter(
+                (candidate) =>
+                  !candidate.gatewayInstance || candidate.gatewayInstance.id === state.gateway.id,
+              ),
+            )
+          }
           onCancel={() =>
             setState({
               phase: 'pick-model',

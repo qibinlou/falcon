@@ -85,6 +85,16 @@ describe('Core Utilities', () => {
       }
     }
   });
+
+  test('checkAgentInstalled accepts an absolute executable path', () => {
+    const tmpFile = path.resolve('./temp-absolute-mock-bin');
+    fs.writeFileSync(tmpFile, '#!/bin/sh\necho 1', { mode: 0o755 });
+    try {
+      assert.strictEqual(checkAgentInstalled('absolute-agent-slug', tmpFile), true);
+    } finally {
+      fs.unlinkSync(tmpFile);
+    }
+  });
 });
 
 describe('sortModels', () => {

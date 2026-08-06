@@ -1,6 +1,7 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
-import type { GatewayConfig } from '../gateways/index.js';
+import type { GatewayConfig, ModelInfo } from '../gateways/index.js';
 import type { AgentLauncher, ResolvedConfig, SpawnConfig } from './index.js';
 import { bifrost } from './shared/bifrost.js';
 import {
@@ -12,17 +13,24 @@ import {
 import {
   deriveProviderKey,
   writeCodexModelCatalog,
+  writeCodexModelsCache,
   upsertSection,
   upsertTopLevelKey,
 } from './codex-utils.js';
-import {
-  buildCodexAppModelDisplayName,
-  patchCodexAppModelLabelAfterSpawn,
-} from './codex-app-statsig.js';
-import { getFreePort } from '../utils.js';
 
 const DEFAULT_CODEX_DESKTOP_PATH = '/Applications/ChatGPT.app/Contents/MacOS/ChatGPT';
-const ENV_FALCON_CODEX_APP_DEBUG_PORT = 'FALCON_CODEX_APP_DEBUG_PORT';
+
+function resolveCodexDesktopPath(): string {
+  return (
+    process.env['CHATGPT_DESKTOP_PATH'] ||
+    process.env['CODEX_DESKTOP_PATH'] ||
+    DEFAULT_CODEX_DESKTOP_PATH
+  );
+}
+
+function buildCodexAppModelDisplayName(modelName: string, gatewaySlug?: string): string {
+  return gatewaySlug && gatewaySlug !== 'none' ? `${modelName} - ${gatewaySlug}` : modelName;
+}
 
 /**
  * Launches the Codex **desktop app** (the Electron build) configured against a
@@ -35,21 +43,24 @@ const ENV_FALCON_CODEX_APP_DEBUG_PORT = 'FALCON_CODEX_APP_DEBUG_PORT';
  * flag — so all configuration is delivered through files + env in CODEX_HOME:
  *   - `config.toml`     — provider routing + the picked model (top-level keys).
  *   - `model.json`      — the model catalog the desktop UI lists.
- *   - `auth.json`       — API-key auth so it skips the ChatGPT login prompt.
+ *   - `auth.json`       — native desktop auth metadata for model-picker support.
  *   - `OPENAI_BASE_URL` / `OPENAI_API_KEY` env — the live gateway endpoint.
  */
 export class CodexAppLauncher implements AgentLauncher {
   name = 'Codex Desktop App';
   slug = 'codex-app';
-  // The desktop app ships with the `codex` CLI; use it as the install probe.
-  binaryName = 'codex';
+  get binaryName(): string {
+    return resolveCodexDesktopPath();
+  }
   installCommand = 'npm install -g @openai/codex';
+  modelCatalogMode = 'gateway' as const;
 
   async resolveConfig(
     gatewayConfig: GatewayConfig,
     gatewaySlug: string,
     apiKey: string,
     model: string,
+    availableModels?: ModelInfo[],
   ): Promise<ResolvedConfig> {
     const env = { ...gatewayConfig.env };
     let baseUrl = gatewayConfig.baseUrl;
@@ -65,14 +76,14 @@ export class CodexAppLauncher implements AgentLauncher {
 
     const codexDir = this.getCodexAppDir();
     env[ENV_CODEX_HOME] = codexDir;
-    env[ENV_FALCON_CODEX_APP_DEBUG_PORT] = String(await getFreePort());
 
-    // Persist API-key auth so the desktop app authenticates against the gateway
-    // out of the box instead of falling back to the ChatGPT subscription login.
+    // Keep native ChatGPT auth metadata when it is available. Current Codex
+    // Desktop uses it to enable its native model picker, while the custom
+    // provider still reads the actual gateway credential from OPENAI_API_KEY.
     const apiAuthKey = env['OPENAI_API_KEY'] || apiKey;
     if (apiAuthKey) {
       try {
-        ensureCodexAuth(codexDir, apiAuthKey);
+        ensureCodexAppAuth(codexDir, apiAuthKey);
       } catch (err) {
         console.error(
           `Warning: Failed to write Codex auth: ${err instanceof Error ? err.message : err}`,
@@ -82,7 +93,14 @@ export class CodexAppLauncher implements AgentLauncher {
 
     if (model) {
       try {
-        await ensureCodexAppConfig(codexDir, gatewaySlug, model, baseUrl, env['OPENAI_BASE_URL']);
+        await ensureCodexAppConfig(
+          codexDir,
+          gatewaySlug,
+          model,
+          baseUrl,
+          env['OPENAI_BASE_URL'],
+          availableModels,
+        );
       } catch (err) {
         console.error(
           `Warning: Failed to configure Codex App: ${err instanceof Error ? err.message : err}`,
@@ -100,27 +118,11 @@ export class CodexAppLauncher implements AgentLauncher {
   ): SpawnConfig {
     const codexDir = this.getCodexAppDir();
     const electronUserDataDir = path.join(codexDir, 'electron-user-data');
-    const desktopBinary =
-      process.env['CHATGPT_DESKTOP_PATH'] ||
-      process.env['CODEX_DESKTOP_PATH'] ||
-      DEFAULT_CODEX_DESKTOP_PATH;
-    const requestedDebugPort = getRemoteDebuggingPort(extraArgs);
-    const debugPort =
-      requestedDebugPort ?? Number(resolvedConfig.env[ENV_FALCON_CODEX_APP_DEBUG_PORT]);
-    const debugArgs =
-      requestedDebugPort == null && Number.isFinite(debugPort)
-        ? ['--remote-debugging-address=127.0.0.1', `--remote-debugging-port=${debugPort}`]
-        : [];
-
-    // Read all catalog model slugs so every model in model.json is patched into
-    // the Statsig allow-list, enabling switching between models in the Desktop UI.
-    const allCatalogModels = readCatalogModelSlugs(path.join(codexDir, 'model.json'));
-
     // A dedicated `--user-data-dir` defeats Electron's single-instance lock so a
     // new window opens even while the primary Codex app is running.
     return {
-      command: desktopBinary,
-      args: [`--user-data-dir=${electronUserDataDir}`, ...debugArgs, ...extraArgs],
+      command: resolveCodexDesktopPath(),
+      args: [`--user-data-dir=${electronUserDataDir}`, ...extraArgs],
       env: {
         ...resolvedConfig.env,
         CHATGPT_ELECTRON_USER_DATA_PATH: electronUserDataDir,
@@ -128,17 +130,6 @@ export class CodexAppLauncher implements AgentLauncher {
       },
       cleanup: resolvedConfig.cleanup,
       detached: true,
-      afterSpawn:
-        Number.isFinite(debugPort) && debugPort > 0
-          ? (proc) =>
-              patchCodexAppModelLabelAfterSpawn(
-                proc,
-                debugPort,
-                _model,
-                resolvedConfig.gatewaySlug,
-                allCatalogModels,
-              )
-          : undefined,
     };
   }
 
@@ -148,26 +139,35 @@ export class CodexAppLauncher implements AgentLauncher {
   }
 }
 
-function getRemoteDebuggingPort(args: string[]): number | undefined {
-  const portArg = args.find((arg) => arg.startsWith('--remote-debugging-port='));
-  if (!portArg) {
-    return undefined;
-  }
-
-  const port = Number(portArg.split('=')[1]);
-  return Number.isFinite(port) && port > 0 ? port : undefined;
-}
-
 /**
- * Writes `auth.json` with API-key auth. The matching base URL is supplied
- * separately via the `OPENAI_BASE_URL` env var at launch.
+ * Copies the primary profile's native ChatGPT auth when possible because the
+ * desktop renderer requires that metadata to expose its model picker. The
+ * custom provider does not use those tokens: it reads OPENAI_API_KEY through
+ * its `env_key` config. API-key auth remains a fallback for signed-out users.
  */
-function ensureCodexAuth(codexDir: string, apiKey: string): void {
+function ensureCodexAppAuth(codexDir: string, apiKey: string): void {
   if (!fs.existsSync(codexDir)) {
     fs.mkdirSync(codexDir, { recursive: true, mode: 0o700 });
   }
   const authPath = path.join(codexDir, 'auth.json');
-  const auth = { auth_mode: 'apikey', OPENAI_API_KEY: apiKey };
+  const primaryAuthPath =
+    process.env['FALCON_CODEX_APP_CHATGPT_AUTH_PATH'] ||
+    path.join(os.homedir(), '.codex', 'auth.json');
+  let auth: Record<string, unknown> = { auth_mode: 'apikey', OPENAI_API_KEY: apiKey };
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(primaryAuthPath, 'utf8')) as Record<string, unknown>;
+    if (
+      parsed.auth_mode === 'chatgpt' &&
+      parsed.tokens !== null &&
+      typeof parsed.tokens === 'object'
+    ) {
+      auth = parsed;
+    }
+  } catch (_e) {
+    // Signed-out or unavailable primary profile: retain API-key fallback.
+  }
+
   fs.writeFileSync(authPath, JSON.stringify(auth, null, 2), { encoding: 'utf8', mode: 0o600 });
 }
 
@@ -183,6 +183,7 @@ async function ensureCodexAppConfig(
   modelName: string,
   resolvedBaseUrl?: string,
   envBaseUrl?: string,
+  availableModels?: ModelInfo[],
 ): Promise<void> {
   if (!fs.existsSync(codexDir)) {
     fs.mkdirSync(codexDir, { recursive: true, mode: 0o700 });
@@ -193,29 +194,12 @@ async function ensureCodexAppConfig(
 
   await writeCodexModelCatalog(catalogPath, modelName, {
     displayName: buildCodexAppModelDisplayName(modelName, gatewaySlug),
+    models: availableModels,
+    displayNameForModel: (candidate) =>
+      buildCodexAppModelDisplayName(candidate.id, gatewaySlug),
   });
 
-  // Rewrite all model display names in the catalog to follow the "{model_id} - {gateway_name}" convention
-  try {
-    if (fs.existsSync(catalogPath)) {
-      const data = fs.readFileSync(catalogPath, 'utf8');
-      const parsed = JSON.parse(data);
-      if (parsed && Array.isArray(parsed.models)) {
-        for (const model of parsed.models) {
-          if (model && typeof model.slug === 'string') {
-            let cleanSlug = model.slug;
-            if (cleanSlug.startsWith('npm ')) {
-              cleanSlug = cleanSlug.slice(4);
-            }
-            model.display_name = buildCodexAppModelDisplayName(cleanSlug, gatewaySlug);
-          }
-        }
-        fs.writeFileSync(catalogPath, JSON.stringify(parsed, null, 2), 'utf8');
-      }
-    }
-  } catch (_e) {
-    // Ignore rewrite error
-  }
+  writeCodexModelsCache(catalogPath, path.join(codexDir, 'models_cache.json'));
 
   let baseUrl =
     resolvedBaseUrl || envBaseUrl || process.env['OPENAI_BASE_URL'] || DEFAULT_OPENAI_BASE_URL;
@@ -241,7 +225,9 @@ async function ensureCodexAppConfig(
   text = upsertSection(text, `[model_providers.${providerKey}]`, [
     `name = "${providerKey}"`,
     `base_url = "${baseUrl}"`,
+    `env_key = "OPENAI_API_KEY"`,
     `wire_api = "responses"`,
+    `requires_openai_auth = true`,
   ]);
 
   // Privacy mode: disable analytics and feedback telemetry by default.
@@ -249,22 +235,4 @@ async function ensureCodexAppConfig(
   text = upsertSection(text, `[feedback]`, [`enabled = false`]);
 
   fs.writeFileSync(configPath, text, 'utf8');
-}
-
-export function readCatalogModelSlugs(catalogPath: string): string[] {
-  if (!fs.existsSync(catalogPath)) {
-    return [];
-  }
-  try {
-    const data = fs.readFileSync(catalogPath, 'utf8');
-    const parsed = JSON.parse(data);
-    if (parsed && Array.isArray(parsed.models)) {
-      return parsed.models
-        .map((m: { slug?: string }) => m.slug)
-        .filter((slug: unknown): slug is string => typeof slug === 'string');
-    }
-  } catch (_e) {
-    // Ignore read or parse error
-  }
-  return [];
 }

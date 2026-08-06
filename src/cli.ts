@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { ALL_AGENTS, findAgent, type ResolvedConfig } from './agents/index.js';
+import { loadGatewayModelCatalog } from './agents/model-catalog.js';
 import { spawn } from 'child_process';
 import { detectGatewayInstances, withGatewayEnv, withGatewayEnvAsync } from './gateways/index.js';
 import { renderApp } from './ui/App.js';
@@ -191,6 +192,7 @@ async function handleLaunch(
     if (targetGateway) {
       gatewayEnv = targetGateway.fields;
       const config = targetGateway.gateway.getEnvConfig(targetGateway.apiKey, model);
+      const availableModels = await loadGatewayModelCatalog(agent, targetGateway);
       try {
         resolvedConfig = await withGatewayEnvAsync({ fields: gatewayEnv }, async () => {
           return await agent.resolveConfig(
@@ -198,6 +200,7 @@ async function handleLaunch(
             targetGateway.gateway.slug,
             targetGateway.apiKey,
             model,
+            availableModels,
           );
         });
       } catch (err) {
