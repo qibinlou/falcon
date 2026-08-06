@@ -58,16 +58,18 @@ const DEFAULT_REASONING_LEVELS = [
   { effort: 'xhigh', description: 'Extra high reasoning depth for complex problems' },
 ];
 
-function normalizeCodexCatalogEntry(entry: {
+function normalizeCodexCatalogEntry(entry: { slug: string; [key: string]: unknown }): {
   slug: string;
   [key: string]: unknown;
-}): { slug: string; [key: string]: unknown } {
+} {
   const contextWindow =
     typeof entry.context_window === 'number' && entry.context_window > 0
       ? entry.context_window
       : fallbackContextWindow(entry.slug);
   const inputModalities = Array.isArray(entry.input_modalities)
-    ? cleanModalities(entry.input_modalities.filter((value): value is string => typeof value === 'string'))
+    ? cleanModalities(
+        entry.input_modalities.filter((value): value is string => typeof value === 'string'),
+      )
     : fallbackModalities(entry.slug);
 
   return {
@@ -179,15 +181,13 @@ export async function writeCodexModelCatalog(
     const metadata = findModelMetadata(catalogMetadata, candidate.id);
     const contextWindow =
       candidate.contextLength || metadata?.contextLength || fallbackContextWindow(candidate.id);
-    const modalities = cleanModalities(
-      metadata?.modalities ?? fallbackModalities(candidate.id),
-    );
+    const modalities = cleanModalities(metadata?.modalities ?? fallbackModalities(candidate.id));
     return normalizeCodexCatalogEntry({
       slug: candidate.id,
       display_name:
         candidate.id === modelName && options.displayName
           ? options.displayName
-          : options.displayNameForModel?.(candidate) ?? candidate.id,
+          : (options.displayNameForModel?.(candidate) ?? candidate.id),
       description: `Routed through Falcon as ${candidate.id}.`,
       context_window: contextWindow,
       input_modalities: modalities,

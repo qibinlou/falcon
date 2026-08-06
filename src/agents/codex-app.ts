@@ -195,8 +195,7 @@ async function ensureCodexAppConfig(
   await writeCodexModelCatalog(catalogPath, modelName, {
     displayName: buildCodexAppModelDisplayName(modelName, gatewaySlug),
     models: availableModels,
-    displayNameForModel: (candidate) =>
-      buildCodexAppModelDisplayName(candidate.id, gatewaySlug),
+    displayNameForModel: (candidate) => buildCodexAppModelDisplayName(candidate.id, gatewaySlug),
   });
 
   writeCodexModelsCache(catalogPath, path.join(codexDir, 'models_cache.json'));

@@ -194,9 +194,7 @@ describe('Codex App (Desktop) Launcher', () => {
         'openrouter/free',
       );
 
-      const isolatedAuth = JSON.parse(
-        fs.readFileSync(path.join(codexAppDir, 'auth.json'), 'utf8'),
-      );
+      const isolatedAuth = JSON.parse(fs.readFileSync(path.join(codexAppDir, 'auth.json'), 'utf8'));
       assert.deepStrictEqual(isolatedAuth, primaryAuth);
       assert.notStrictEqual(isolatedAuth.OPENAI_API_KEY, 'sk-or-fake-key');
     } finally {
@@ -226,9 +224,7 @@ describe('Codex App (Desktop) Launcher', () => {
       ],
     );
 
-    const catalog = JSON.parse(
-      fs.readFileSync(path.join(codexAppDir, 'model.json'), 'utf8'),
-    );
+    const catalog = JSON.parse(fs.readFileSync(path.join(codexAppDir, 'model.json'), 'utf8'));
     assert.deepStrictEqual(
       catalog.models.map((entry: { slug: string }) => entry.slug),
       ['vendor/model-b', 'vendor/model-a', 'vendor/model-c'],
@@ -259,9 +255,7 @@ describe('Codex App (Desktop) Launcher', () => {
     assert.strictEqual(spawnConfig.command, expectedBinary);
 
     const expectedElectronDir = path.join(codexAppDir, 'electron-user-data');
-    assert.deepStrictEqual(spawnConfig.args, [
-      `--user-data-dir=${expectedElectronDir}`,
-    ]);
+    assert.deepStrictEqual(spawnConfig.args, [`--user-data-dir=${expectedElectronDir}`]);
     assert.strictEqual(spawnConfig.env['CHATGPT_ELECTRON_USER_DATA_PATH'], expectedElectronDir);
     assert.strictEqual(spawnConfig.env['CODEX_ELECTRON_USER_DATA_PATH'], expectedElectronDir);
     assert.strictEqual(spawnConfig.afterSpawn, undefined);
@@ -406,5 +400,4 @@ describe('Codex App (Desktop) Launcher', () => {
     assert.ok(slugs.includes('model-a'));
     assert.ok(slugs.includes('model-b'));
   });
-
 });
