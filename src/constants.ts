@@ -20,6 +20,7 @@ export const ENV_CLAUDE_CONFIG_DIR = 'CLAUDE_CONFIG_DIR';
 export const ENV_CODEX_HOME = 'CODEX_HOME';
 export const ENV_OPENCODE_CONFIG_DIR = 'OPENCODE_CONFIG_DIR';
 export const ENV_PI_CONFIG_DIR = 'PI_AGENT_DIR';
+export const ENV_HERMES_HOME = 'HERMES_HOME';
 export const ENV_FALCON_CONFIG_FILE = 'FALCON_CONFIG_FILE';
 
 // Workspace Default Paths

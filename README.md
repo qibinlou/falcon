@@ -6,12 +6,13 @@
 [![Agent: Claude Code](https://img.shields.io/badge/Agent-Claude%20Code-orange.svg?style=flat-square&color=cc9900)](https://docs.anthropic.com/en/docs/claude-code)
 [![Agent: OpenCode](https://img.shields.io/badge/Agent-OpenCode-blue.svg?style=flat-square&color=3399ff)](https://opencode.ai)
 [![Agent: Pi](https://img.shields.io/badge/Agent-Pi-orange.svg?style=flat-square&color=ff8c00)](https://pi.dev)
+[![Agent: Hermes](https://img.shields.io/badge/Agent-Hermes-purple.svg?style=flat-square&color=8b5cf6)](https://github.com/NousResearch/hermes-agent)
 [![LLM Providers: All](https://img.shields.io/badge/LLM%20Providers-All-brightgreen.svg?style=flat-square&color=16d3b4)](#-environment-configuration--api-gateways)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg?style=flat-square&color=6e5aff)](LICENSE)
 [![Built with TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg?style=flat-square&color=3178c6)](https://www.typescriptlang.org/)
 [![UI: Ink](https://img.shields.io/badge/UI-Ink%20%26%20React-red.svg?style=flat-square&color=ff5a5f)](https://github.com/vadimdemedes/ink)
 
-Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/), [OpenCode](https://opencode.ai), and [Pi](https://pi.dev)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway, Kimi, and OpenAI Compatible custom endpoints), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
+Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/), [OpenCode](https://opencode.ai), [Pi](https://pi.dev), and [Hermes Agent](https://github.com/NousResearch/hermes-agent)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway, Kimi, and OpenAI Compatible custom endpoints), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
 
 ---
 
@@ -95,6 +96,9 @@ falcon opencode
 # Shorthand to run Pi
 falcon pi
 
+# Shorthand to run Hermes Agent
+falcon hermes
+
 # Shorthand to run Codex Desktop App
 falcon codex-app
 
@@ -113,12 +117,13 @@ falcon claude --model chat-latest
 
 | Command | Description |
 | :--- | :--- |
-| `falcon launch [agent] [options] [agentArgs...]` | Launches a coding agent (e.g. `codex`, `claude`, `opencode`, or `pi`) with options. |
+| `falcon launch [agent] [options] [agentArgs...]` | Launches a coding agent (e.g. `codex`, `claude`, `opencode`, `pi`, or `hermes`) with options. |
 | `falcon codex [options] [agentArgs...]` | Shorthand to launch OpenAI Codex CLI directly. |
 | `falcon codex-app [options] [agentArgs...]` | Shorthand to launch Codex Desktop App directly. |
 | `falcon claude [options] [agentArgs...]` | Shorthand to launch Claude Code directly. |
 | `falcon opencode [options] [agentArgs...]` | Shorthand to launch OpenCode directly. |
 | `falcon pi [options] [agentArgs...]` | Shorthand to launch Pi directly. |
+| `falcon hermes [options] [agentArgs...]` | Shorthand to launch Hermes Agent directly. |
 | `falcon models [options]` | Query and list available models from detected API gateways. |
 
 ### Launch Options
@@ -146,6 +151,10 @@ Falcon leverages environment variables to identify and initialize connections to
 
 ---
 
+### 🛠️ Agent-Specific Side-Effects
+
+*   **Hermes Agent**: Resolves its isolated data directory via `HERMES_HOME` (defaulting to `~/.falcon/hermes/` or using `FALCON_DIR`) and creates it with mode `0700`. Maps each gateway to Hermes' provider-specific environment variables and converts Falcon's `-p/--prompt` to `hermes chat -q`. No Hermes telemetry or update-check variables are set because the documented environment-variable reference does not define an opt-out for them.
+
 ## 📂 Codebase & Architecture
 
 Falcon is structured to make extending gateways and agents straightforward:
@@ -159,6 +168,7 @@ Falcon is structured to make extending gateways and agents straightforward:
 *   [codex-utils.ts](./src/agents/codex-utils.ts): Shared configuration helpers for Codex CLI and Desktop App launchers, including OpenRouter-backed context window and modality lookup with local caching.
     *   [opencode.ts](./src/agents/opencode.ts): Manages OpenCode's config directory and dynamically updates `opencode.json` config settings.
     *   [pi.ts](./src/agents/pi.ts): Manages Pi's config directory (`PI_AGENT_DIR`, defaulting to `~/.falcon/pi`) and registers a `falcon` provider in pi's `models.json` (API key referenced via env interpolation, never written to disk).
+    *   [hermes.ts](./src/agents/hermes.ts): Isolates Hermes Agent data under `HERMES_HOME` (defaulting to `~/.falcon/hermes`) and maps Falcon gateway credentials to Hermes provider environment variables.
 *   **[src/gateways/](./src/gateways/)**: Providers logic matching API payloads to model metadata lists.
 *   **[src/ui/](./src/ui/)**: Reactive terminal components built on Ink and React.
 

@@ -56,6 +56,7 @@ describe('CLI Unit Tests', () => {
       assert.ok(commandNames.includes('claude'));
       assert.ok(commandNames.includes('opencode'));
       assert.ok(commandNames.includes('pi'));
+      assert.ok(commandNames.includes('hermes'));
     });
 
     it('defines the correct options on subcommands', () => {
