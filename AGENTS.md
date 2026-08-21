@@ -6,7 +6,7 @@ Welcome, Agent! This document provides comprehensive context on the Falcon codeb
 
 ## 📖 System Overview & Features
 
-**Falcon** is a CLI and Terminal User Interface (TUI) tool written in TypeScript. It wraps coding agents—specifically [Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway, Kimi, and OpenAI Compatible custom endpoints), allowing you to launch coding agents with a single command.
+**Falcon** is a CLI and Terminal User Interface (TUI) tool written in TypeScript. It wraps coding agents—specifically [Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and [OpenCode](https://opencode.ai), and [Pi](https://pi.dev)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway, Kimi, and OpenAI Compatible custom endpoints), allowing you to launch coding agents with a single command.
 
 ### Key Features
 - **Multi-gateway support** — Auto-detects API keys from OpenRouter, OpenAI, Anthropic, Cloudflare, Kimi, and custom OpenAI Compatible providers.
@@ -42,6 +42,7 @@ falcon launch codex
 falcon launch codex-app
 falcon launch claude
 falcon launch opencode
+falcon launch pi
 
 # Launch with a specific model
 falcon launch claude --model claude-sonnet-4-20250514
@@ -92,6 +93,7 @@ Falcon detects and initializes gateways based on the presence of specific enviro
 *   **Codex Desktop App**: Resolves configuration directory under `process.env.FALCON_DIR/codex-app` or `~/.falcon/codex-app`. Dynamically manages top-level keys in `config.toml`, parses `model.json`, and persists key auth in `auth.json`.
 *   **Claude Code**: Directly relies on environment variables (`ANTHROPIC_API_KEY` or custom compatible endpoints like `ANTHROPIC_BASE_URL` mapped by the active gateway).
 *   **OpenCode**: Resolves config directory via `process.env.OPENCODE_CONFIG_DIR` (defaulting to `~/.falcon/opencode/` or using `FALCON_DIR`) and updates the `opencode.json` configuration settings.
+*   **Pi**: Resolves config directory via `PI_AGENT_DIR` (defaulting to `~/.falcon/pi/` or using `FALCON_DIR`) and registers a `falcon` provider in pi's `models.json`. The API key is referenced via `$FALCON_PI_API_KEY` env interpolation so it is never persisted to disk. Disables update checks (`PI_SKIP_VERSION_CHECK=1`) and telemetry (`PI_TELEMETRY=0`). Converts Falcon's `-p/--prompt` to pi's print mode.
 
 ---
 
@@ -108,6 +110,7 @@ Here is how the codebase is structured:
     *   **[src/agents/codex-utils.ts](./src/agents/codex-utils.ts)**: Extracted configuration helpers shared by both Codex CLI and Desktop App launchers.
     *   **[src/agents/claude.ts](./src/agents/claude.ts)**: Wrapper for Claude Code. Passes `--dangerously-skip-permissions` to bypass prompts in sandbox environments.
     *   **[src/agents/opencode.ts](./src/agents/opencode.ts)**: Wrapper for OpenCode. Dynamically generates or updates the local `opencode.json` config settings.
+    *   **[src/agents/pi.ts](./src/agents/pi.ts)**: Wrapper for Pi. Dynamically generates or updates the local `models.json` provider config.
 *   **[src/gateways/](./src/gateways/)**: Directory containing API gateways/proxies.
     *   **[src/gateways/index.ts](./src/gateways/index.ts)**: Declares the [Gateway](./src/gateways/index.ts#L19) interface, [ModelInfo](./src/gateways/index.ts#L3), and the `ALL_GATEWAYS` registry list.
     *   **[src/gateways/openrouter.ts](./src/gateways/openrouter.ts)**: Live fetches models from OpenRouter's HTTP endpoint. Sets up OpenAI and Anthropic compatible environment variables for Codex/Claude routing.

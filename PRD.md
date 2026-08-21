@@ -14,6 +14,7 @@ CLI commands design should follow docker's CLI design style.
 - `codex` - OpenAI's Codex 
 - `claude` - Anthropic's Claude Code
 - `opencode` - OpenCode TUI Agent
+- `pi` - Pi Coding Agent (https://pi.dev)
 
 ## CLI Design Notes
 - falcon's local config path is `~/.falcon/`

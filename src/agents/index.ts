@@ -37,17 +37,20 @@ export { ClaudeLauncher as ClaudeAgent } from './claude.js';
 export { CodexLauncher as CodexAgent } from './codex.js';
 export { CodexAppLauncher as CodexAppAgent } from './codex-app.js';
 export { OpencodeLauncher as OpencodeAgent } from './opencode.js';
+export { PiLauncher as PiAgent } from './pi.js';
 
 import { ClaudeLauncher } from './claude.js';
 import { CodexLauncher } from './codex.js';
 import { CodexAppLauncher } from './codex-app.js';
 import { OpencodeLauncher } from './opencode.js';
+import { PiLauncher } from './pi.js';
 
 export const ALL_AGENTS: AgentLauncher[] = [
   new CodexLauncher(),
   new CodexAppLauncher(),
   new ClaudeLauncher(),
   new OpencodeLauncher(),
+  new PiLauncher(),
 ];
 
 export function findAgent(name: string): AgentLauncher | undefined {

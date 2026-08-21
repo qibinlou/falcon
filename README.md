@@ -5,12 +5,13 @@
 [![Agent: Codex](https://img.shields.io/badge/Agent-Codex-orange.svg?style=flat-square&color=00a67e)](https://github.com/openai/codex)
 [![Agent: Claude Code](https://img.shields.io/badge/Agent-Claude%20Code-orange.svg?style=flat-square&color=cc9900)](https://docs.anthropic.com/en/docs/claude-code)
 [![Agent: OpenCode](https://img.shields.io/badge/Agent-OpenCode-blue.svg?style=flat-square&color=3399ff)](https://opencode.ai)
+[![Agent: Pi](https://img.shields.io/badge/Agent-Pi-orange.svg?style=flat-square&color=ff8c00)](https://pi.dev)
 [![LLM Providers: All](https://img.shields.io/badge/LLM%20Providers-All-brightgreen.svg?style=flat-square&color=16d3b4)](#-environment-configuration--api-gateways)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg?style=flat-square&color=6e5aff)](LICENSE)
 [![Built with TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg?style=flat-square&color=3178c6)](https://www.typescriptlang.org/)
 [![UI: Ink](https://img.shields.io/badge/UI-Ink%20%26%20React-red.svg?style=flat-square&color=ff5a5f)](https://github.com/vadimdemedes/ink)
 
-Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/), and [OpenCode](https://opencode.ai)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway, Kimi, and OpenAI Compatible custom endpoints), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
+Falcon is an elegant command-line interface (CLI) and interactive Terminal User Interface (TUI) orchestrator written in TypeScript. It wraps coding agents—specifically [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenAI Codex CLI](https://github.com/openai/codex), [Codex Desktop App](https://chatgpt.com/codex/), [OpenCode](https://opencode.ai), and [Pi](https://pi.dev)—and provides multi-gateway API support (OpenRouter, OpenAI, Anthropic, Cloudflare AI Gateway, Kimi, and OpenAI Compatible custom endpoints), allowing you to run any compatible model under any agent harness with zero configuration overhead and absolute privacy.
 
 ---
 
@@ -91,6 +92,9 @@ falcon claude
 # Shorthand to run OpenCode
 falcon opencode
 
+# Shorthand to run Pi
+falcon pi
+
 # Shorthand to run Codex Desktop App
 falcon codex-app
 
@@ -109,11 +113,12 @@ falcon claude --model chat-latest
 
 | Command | Description |
 | :--- | :--- |
-| `falcon launch [agent] [options] [agentArgs...]` | Launches a coding agent (e.g. `codex`, `claude`, or `opencode`) with options. |
+| `falcon launch [agent] [options] [agentArgs...]` | Launches a coding agent (e.g. `codex`, `claude`, `opencode`, or `pi`) with options. |
 | `falcon codex [options] [agentArgs...]` | Shorthand to launch OpenAI Codex CLI directly. |
 | `falcon codex-app [options] [agentArgs...]` | Shorthand to launch Codex Desktop App directly. |
 | `falcon claude [options] [agentArgs...]` | Shorthand to launch Claude Code directly. |
 | `falcon opencode [options] [agentArgs...]` | Shorthand to launch OpenCode directly. |
+| `falcon pi [options] [agentArgs...]` | Shorthand to launch Pi directly. |
 | `falcon models [options]` | Query and list available models from detected API gateways. |
 
 ### Launch Options
@@ -153,6 +158,7 @@ Falcon is structured to make extending gateways and agents straightforward:
 *   [codex-app.ts](./src/agents/codex-app.ts): Configures Codex Desktop App's top-level config keys, `auth.json`, and custom isolated catalog built from the same metadata source.
 *   [codex-utils.ts](./src/agents/codex-utils.ts): Shared configuration helpers for Codex CLI and Desktop App launchers, including OpenRouter-backed context window and modality lookup with local caching.
     *   [opencode.ts](./src/agents/opencode.ts): Manages OpenCode's config directory and dynamically updates `opencode.json` config settings.
+    *   [pi.ts](./src/agents/pi.ts): Manages Pi's config directory (`PI_AGENT_DIR`, defaulting to `~/.falcon/pi`) and registers a `falcon` provider in pi's `models.json` (API key referenced via env interpolation, never written to disk).
 *   **[src/gateways/](./src/gateways/)**: Providers logic matching API payloads to model metadata lists.
 *   **[src/ui/](./src/ui/)**: Reactive terminal components built on Ink and React.
 
