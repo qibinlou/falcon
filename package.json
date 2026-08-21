@@ -1,6 +1,6 @@
 {
   "name": "falconsh",
-  "version": "1.2.1",
+  "version": "1.0.0",
   "description": "Run any coding agent with any LLM in absolute privacy. Currently support Claude Code, Codex and OpenCode.",
   "type": "module",
   "packageManager": "pnpm@11.1.3",
