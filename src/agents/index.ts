@@ -38,12 +38,14 @@ export { CodexLauncher as CodexAgent } from './codex.js';
 export { CodexAppLauncher as CodexAppAgent } from './codex-app.js';
 export { OpencodeLauncher as OpencodeAgent } from './opencode.js';
 export { PiLauncher as PiAgent } from './pi.js';
+export { HermesLauncher as HermesAgent } from './hermes.js';
 
 import { ClaudeLauncher } from './claude.js';
 import { CodexLauncher } from './codex.js';
 import { CodexAppLauncher } from './codex-app.js';
 import { OpencodeLauncher } from './opencode.js';
 import { PiLauncher } from './pi.js';
+import { HermesLauncher } from './hermes.js';
 
 export const ALL_AGENTS: AgentLauncher[] = [
   new CodexLauncher(),
@@ -51,6 +53,7 @@ export const ALL_AGENTS: AgentLauncher[] = [
   new ClaudeLauncher(),
   new OpencodeLauncher(),
   new PiLauncher(),
+  new HermesLauncher(),
 ];
 
 export function findAgent(name: string): AgentLauncher | undefined {

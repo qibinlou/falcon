@@ -40,6 +40,7 @@ describe('CLI Contract', () => {
     assertContains(r.stdout + r.stderr, 'codex', 'launch (no agent)');
     assertContains(r.stdout + r.stderr, 'claude', 'launch (no agent)');
     assertContains(r.stdout + r.stderr, 'opencode', 'launch (no agent)');
+    assertContains(r.stdout + r.stderr, 'hermes', 'launch (no agent)');
     assertNotContains(r.stdout + r.stderr, 'agy', 'launch (no agent)');
   });
 

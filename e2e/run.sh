@@ -26,6 +26,7 @@ SUITES=(
   "e2e/06-codex-modalities.test.ts"
   "e2e/07-codex-app-multi-model.test.ts"
   "e2e/08-pi-agent.test.ts"
+  "e2e/09-hermes-agent.test.ts"
 )
 
 SUITE_LABELS=(
@@ -36,6 +37,7 @@ SUITE_LABELS=(
   "06 · Codex Modalities"
   "07 · Codex App Multi-Model"
   "08 · Pi Agent"
+  "09 · Hermes Agent"
 )
 
 # ── Load .env if present ──────────────────────────────────────────────────────

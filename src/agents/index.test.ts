@@ -10,6 +10,7 @@ describe('Agents Registry', () => {
     assert.ok(slugs.includes('codex'));
     assert.ok(slugs.includes('opencode'));
     assert.ok(slugs.includes('pi'));
+    assert.ok(slugs.includes('hermes'));
   });
 
   test('findAgent should find agent by slug case-insensitively', () => {
@@ -24,6 +25,10 @@ describe('Agents Registry', () => {
     const pi = findAgent('PI');
     assert.ok(pi);
     assert.strictEqual(pi?.slug, 'pi');
+
+    const hermes = findAgent('HERMES');
+    assert.ok(hermes);
+    assert.strictEqual(hermes?.slug, 'hermes');
   });
 
   test('findAgent should find agent by name case-insensitively', () => {
