@@ -6,7 +6,7 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { program, preprocessArgs, parseLaunchArgs } from './cli.js';
+import { parseLaunchArgs, preprocessArgs, program } from './cli.js';
 
 describe('CLI Unit Tests', () => {
   describe('preprocessArgs()', () => {

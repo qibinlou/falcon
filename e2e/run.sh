@@ -25,6 +25,7 @@ SUITES=(
   "e2e/05-interactive-install.test.ts"
   "e2e/06-codex-modalities.test.ts"
   "e2e/07-codex-app-multi-model.test.ts"
+  "e2e/08-pi-agent.test.ts"
 )
 
 SUITE_LABELS=(
@@ -34,6 +35,7 @@ SUITE_LABELS=(
   "05 · Interactive Install"
   "06 · Codex Modalities"
   "07 · Codex App Multi-Model"
+  "08 · Pi Agent"
 )
 
 # ── Load .env if present ──────────────────────────────────────────────────────
