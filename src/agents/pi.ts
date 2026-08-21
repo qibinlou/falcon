@@ -51,7 +51,7 @@ export class PiLauncher implements AgentLauncher {
       fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
     }
 
-    if (model) {
+    if (model && gatewaySlug !== 'none' && apiKey) {
       const modelsPath = path.join(configDir, 'models.json');
 
       // Preserve any existing custom providers in models.json
@@ -61,7 +61,20 @@ export class PiLauncher implements AgentLauncher {
           existing = JSON.parse(fs.readFileSync(modelsPath, 'utf8'));
         }
       } catch (_) {
-        existing = {};
+        // Never silently wipe a corrupt config: warn and back it up so the
+        // user's custom providers are recoverable.
+        const backupPath = `${modelsPath}.bak`;
+        try {
+          fs.copyFileSync(modelsPath, backupPath);
+          console.error(
+            `Warning: ${modelsPath} is not valid JSON and could not be parsed. ` +
+            `The original file was backed up to ${backupPath}; it will not be overwritten.`,
+          );
+        } catch (_) {
+          console.error(`Warning: Failed to read or back up models.json: ${_}`);
+        }
+        // Skip writing entirely: overwriting would destroy the user's config.
+        return { env };
       }
 
       // The API key is referenced via environment interpolation so the raw key
@@ -69,11 +82,19 @@ export class PiLauncher implements AgentLauncher {
       // spawned process environment.
       env['FALCON_PI_API_KEY'] = apiKey;
 
+      // Merge the new model into any previously registered falcon provider
+      // models instead of clobbering the list.
+      const previousFalcon = existing.providers?.falcon as
+        | { models?: Array<{ id: string }> }
+        | undefined;
+      const previousModels = Array.isArray(previousFalcon?.models) ? previousFalcon.models : [];
+      const mergedModels = [...previousModels.filter((m) => m && m.id !== model), { id: model }];
+
       const providerConfig: Record<string, unknown> = {
         baseUrl: gatewayConfig.baseUrl,
         api: getPiApiType(gatewaySlug),
         apiKey: '$FALCON_PI_API_KEY',
-        models: [{ id: model }],
+        models: mergedModels,
       };
 
       const configContent = {
@@ -85,7 +106,11 @@ export class PiLauncher implements AgentLauncher {
       };
 
       try {
-        fs.writeFileSync(modelsPath, JSON.stringify(configContent, null, 2), 'utf8');
+        // Write atomically via a temp file + rename so pi never reads a
+        // partially-written models.json.
+        const tmpPath = `${modelsPath}.tmp`;
+        fs.writeFileSync(tmpPath, JSON.stringify(configContent, null, 2), 'utf8');
+        fs.renameSync(tmpPath, modelsPath);
       } catch (err) {
         console.error(
           `Warning: Failed to write models.json: ${err instanceof Error ? err.message : err}`,
@@ -109,9 +134,14 @@ export class PiLauncher implements AgentLauncher {
 
     for (let i = 0; i < extraArgs.length; i++) {
       if (extraArgs[i] === '-p' || extraArgs[i] === '--prompt') {
-        if (i + 1 < extraArgs.length) {
-          prompt = extraArgs[i + 1];
+        // Only treat it as a prompt flag when followed by a value that isn't
+        // itself a flag. Otherwise forward it untouched so pi can interpret it.
+        const next = extraArgs[i + 1];
+        if (next !== undefined && !next.startsWith('-')) {
+          prompt = next;
           i++;
+        } else {
+          filteredExtraArgs.push(extraArgs[i]);
         }
       } else {
         filteredExtraArgs.push(extraArgs[i]);

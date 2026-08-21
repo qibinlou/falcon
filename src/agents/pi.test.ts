@@ -49,6 +49,26 @@ describe('Pi Agent Launcher', () => {
     assert.deepStrictEqual(config2.args, ['-p', 'Test prompt', '--model', 'gpt-4o']);
   });
 
+  test('buildSpawnConfig should forward bare trailing -p instead of dropping it', () => {
+    const resolved = { env: { FALCON_GATEWAY_SLUG: 'openai' } };
+    const config = launcher.buildSpawnConfig(resolved, 'gpt-4o', ['-p']);
+    assert.deepStrictEqual(
+      config.args,
+      ['--model', 'gpt-4o', '-p'],
+      'bare -p should be forwarded as-is',
+    );
+  });
+
+  test('buildSpawnConfig should forward -p followed by a flag without eating the flag', () => {
+    const resolved = { env: { FALCON_GATEWAY_SLUG: 'openai' } };
+    const config = launcher.buildSpawnConfig(resolved, 'gpt-4o', ['-p', '--verbose']);
+    assert.deepStrictEqual(
+      config.args,
+      ['--model', 'gpt-4o', '-p', '--verbose'],
+      '-p before a flag should be forwarded untouched',
+    );
+  });
+
   test('resolveConfig should set PI_AGENT_DIR and create it', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-pi-test-'));
     const testConfigDir = path.join(tempDir, 'pi');
@@ -82,7 +102,7 @@ describe('Pi Agent Launcher', () => {
       delete process.env[ENV_PI_CONFIG_DIR];
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -119,7 +139,7 @@ describe('Pi Agent Launcher', () => {
       }
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -144,7 +164,7 @@ describe('Pi Agent Launcher', () => {
       delete process.env[ENV_PI_CONFIG_DIR];
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -168,7 +188,7 @@ describe('Pi Agent Launcher', () => {
       delete process.env[ENV_PI_CONFIG_DIR];
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -212,7 +232,7 @@ describe('Pi Agent Launcher', () => {
       delete process.env[ENV_PI_CONFIG_DIR];
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -234,7 +254,7 @@ describe('Pi Agent Launcher', () => {
       delete process.env[ENV_PI_CONFIG_DIR];
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 
@@ -256,7 +276,107 @@ describe('Pi Agent Launcher', () => {
       delete process.env[ENV_PI_CONFIG_DIR];
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (_) {}
+      } catch (_) { }
+    }
+  });
+
+  test('resolveConfig should not write models.json for the no-gateway fallback path', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-pi-test-'));
+    const testConfigDir = path.join(tempDir, 'pi');
+    process.env[ENV_PI_CONFIG_DIR] = testConfigDir;
+
+    try {
+      // Mirrors src/cli.ts fallback: resolveConfig({ env: {} }, 'none', '', model)
+      const resolved = await launcher.resolveConfig({ env: {} }, 'none', '', 'gpt-4o');
+
+      assert.strictEqual(
+        fs.existsSync(path.join(testConfigDir, 'models.json')),
+        false,
+        'models.json must not be written without a real gateway',
+      );
+      assert.strictEqual(
+        resolved.env['FALCON_PI_API_KEY'],
+        undefined,
+        'no API key should be injected for the no-gateway path',
+      );
+    } finally {
+      delete process.env[ENV_PI_CONFIG_DIR];
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (_) { }
+    }
+  });
+
+  test('resolveConfig should not overwrite a corrupt models.json and should warn', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-pi-test-'));
+    const testConfigDir = path.join(tempDir, 'pi');
+    process.env[ENV_PI_CONFIG_DIR] = testConfigDir;
+    fs.mkdirSync(testConfigDir, { recursive: true });
+    const corruptContent = '{ not valid json !!!';
+    const modelsPath = path.join(testConfigDir, 'models.json');
+    fs.writeFileSync(modelsPath, corruptContent, 'utf8');
+
+    const warnings: string[] = [];
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => warnings.push(args.join(' '));
+
+    try {
+      const config: GatewayConfig = { env: { OPENAI_API_KEY: 'sk-test' } };
+      await launcher.resolveConfig(config, 'openai', 'sk-test', 'gpt-4o');
+
+      // The corrupt file must be preserved (backed up), never silently wiped
+      assert.ok(
+        fs.readFileSync(modelsPath, 'utf8').includes('not valid json'),
+        'corrupt file content should be preserved or backed up, not overwritten',
+      );
+      assert.ok(
+        warnings.some((w) => w.toLowerCase().includes('models.json')),
+        'a warning about models.json should be emitted',
+      );
+    } finally {
+      console.error = originalError;
+      delete process.env[ENV_PI_CONFIG_DIR];
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (_) { }
+    }
+  });
+
+  test('resolveConfig should merge new model into existing falcon provider models', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'falcon-pi-test-'));
+    const testConfigDir = path.join(tempDir, 'pi');
+    process.env[ENV_PI_CONFIG_DIR] = testConfigDir;
+    fs.mkdirSync(testConfigDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(testConfigDir, 'models.json'),
+      JSON.stringify({
+        providers: {
+          falcon: {
+            baseUrl: 'https://api.openai.com/v1',
+            api: 'openai-completions',
+            apiKey: '$FALCON_PI_API_KEY',
+            models: [{ id: 'gpt-4o' }],
+          },
+        },
+      }),
+      'utf8',
+    );
+
+    try {
+      const config: GatewayConfig = { env: { OPENAI_API_KEY: 'sk-test' } };
+      await launcher.resolveConfig(config, 'openai', 'sk-test', 'gpt-4o-mini');
+
+      const writtenConfig = JSON.parse(
+        fs.readFileSync(path.join(testConfigDir, 'models.json'), 'utf8'),
+      );
+      const modelIds = writtenConfig.providers.falcon.models.map((m: { id: string }) => m.id);
+      assert.ok(modelIds.includes('gpt-4o-mini'), 'new model should be added');
+      assert.ok(modelIds.includes('gpt-4o'), 'previously registered model should be preserved');
+    } finally {
+      delete process.env[ENV_PI_CONFIG_DIR];
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (_) { }
     }
   });
 });
